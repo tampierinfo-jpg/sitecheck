@@ -32,8 +32,7 @@
   </div>
   
   <script>
-    <script>
-(function () {
+    (function () {
   // Elemente holen (1 Textfeld, 1 Textarea, 2 Buttons)
   const singleInput = document.querySelector('input');
   const listArea    = document.querySelector('textarea');
@@ -106,10 +105,8 @@
       const d = normalizeUrl(line);
       if (!d) return;
       const res = score(d); res.url = d.href; render(res);
-    });
   };
-})();
-</script>
-  </script>
+});
+    <script>
 </body>
 </html>
