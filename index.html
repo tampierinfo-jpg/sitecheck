@@ -22,6 +22,25 @@
     .warn{background:#fef3c7;border:1px solid #fcd34d}
     .bad{background:#fee2e2;border:1px solid #fca5a5}
     .muted{color:#64748b}
+    /* ---- Ampel (Traffic Light) ---- */
+.tl {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.tl-box {
+  width: 26px; height: 60px;
+  background: #222; border-radius: 6px;
+  padding: 6px 5px; display: inline-flex; flex-direction: column;
+  justify-content: space-between;
+}
+.tl-dot { width: 12px; height: 12px; border-radius: 50%; opacity: .25; }
+.tl-red   { background:#e63946; }
+.tl-amber { background:#ffb703; }
+.tl-green { background:#2a9d8f; }
+.tl-on { opacity: 1; box-shadow: 0 0 6px rgba(0,0,0,.25); }
+.tl-label { font-size: 14px; }
   </style>
 </head>
 <body>
