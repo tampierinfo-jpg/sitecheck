@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SiteCheck – iPad</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root { --ok:#16a34a; --warn:#f59e0b; --bad:#ef4444; --bg:#f5f7fb; --card:#fff; --text:#0f172a; }
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;color:var(--text);background:var(--bg)}
+    .wrap{max-width:720px;margin:40px auto;padding:16px}
+    .card{background:var(--card);border-radius:16px;padding:24px;box-shadow:0 6px 24px rgba(0,0,0,.08)}
+    h1{margin:0 0 16px;font-size:32px;font-weight:700}
+    .row{display:flex;gap:12px}
+    input,textarea{width:100%;padding:12px 14px;border:1px solid #d1d5db;border-radius:10px;font:inherit}
+    textarea{min-height:120px;resize:vertical}
+    button{padding:12px 16px;border:0;border-radius:10px;background:#2563eb;color:#fff;font-weight:600;cursor:pointer}
+    button:disabled{opacity:.6;cursor:default}
+    .result{margin-top:18px;padding:14px;border-radius:12px}
+    .ok{background:#dcfce7;border:1px solid #86efac}
+    .warn{background:#fef3c7;border:1px solid #fcd34d}
+    .bad{background:#fee2e2;border:1px solid #fca5a5}
+    .muted{color:#64748b}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>🔒 SiteCheck – iPad</h1>
+
+      <p class="muted">Prüfe eine URL auf Sicherheit.</p>
+      <div class="row" style="margin-bottom:12px">
+        <input id="singleInput" type="url" placeholder="https://beispiel.de/login" />
+        <button id="btnOne" type="button">Prüfen</button>
+      </div>
+
+      <h3 style="margin:20px 0 8px">Liste prüfen</h3>
+      <textarea id="listArea" placeholder="Eine URL pro Zeile"></textarea>
+      <div style="margin-top:10px">
+        <button id="btnList" type="button">Liste prüfen</button>
+      </div>
+
+      <div id="output"></div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const singleInput = document.getElementById('singleInput');
+      const listArea    = document.getElementById('listArea');
+      const btnOne      = document.getElementById('btnOne');
+      const btnList     = document.getElementById('btnList');
+      const output      = document.getElementById('output');
+
+      function render(res){
+        const box = document.createElement('div');
+        box.className = 'result ' + (res.score<=25 ? 'ok' : res.score<=60 ? 'warn' : 'bad');
+        box.innerHTML =
+          `<div><strong>${res.url}</strong></div>
+           <div>Status: ${res.label}</div>
+           ${res.reasons.length ? '<div>• ' + res.reasons.join('<br>• ') + '</div>' : ''}`;
+        output.prepend(box);
+      }
+
+      function isIP(host){ return /^\d+\.\d+\.\d+\.\d+$/.test(host); }
+
+      function normalizeUrl(u){
+        try{
+          if(!/^https?:\/\//i.test(u)) u = 'https://' + u;
+          return new URL(u);
+        }catch{ return null; }
+      }
+
+      const SUSPICIOUS_TLDS = new Set(['zip','mov','gq','work','country','asia','top','xyz']);
+
+      function getTlsIssuerIfHttps(u){
+        // GitHub Pages (rein clientseitig) hat keinen Zugriff auf Zertifikatsinfos:
+        return u.protocol === 'https:' ? 'n/a (Browser verwaltet TLS)' : 'n/a';
+      }
+
+      function scoreUrl(u){
+        let s = 0, reasons = [];
+        const d = normalizeUrl(u);
+        if(!d) return {url:String(u), score:75, label:'Gefährlich', reasons:['Ungültige URL'], issuer:'n/a', host:'–'};
+
+        const host = d.hostname;
+        if(d.protocol !== 'https:'){ s += 25; reasons.push('Kein HTTPS'); }
+        if(host.includes('xn--')){ s += 20; reasons.push('Punycode Domain'); }
+        if(host.length > 25){ s += 8;  reasons.push('Lange Domain'); }
+        if((host.match(/\d/g)||[]).length >= 3){ s += 6; reasons.push('Viele Zahlen'); }
+        const tld = host.split('.').pop() || '';
+        if(SUSPICIOUS_TLDS.has(tld)){ s += 7; reasons.push('Verdächtige TLD .' + tld); }
+        if(isIP(host)){ s += 15; reasons.push('IP statt Domain'); }
+        const issuer = getTlsIssuerIfHttps(d);
+        const label = s<=25 ? 'OK' : s<=50 ? 'Vorsicht' : s<=75 ? 'Riskant' : 'Gefährlich';
+        return {url:d.href, host, score:s, label, issuer, reasons};
+      }
+
+      function safeRun(fn){
+        try{ fn(); }catch(e){ alert('Fehler: ' + (e?.message||e)); }
+      }
+
+      btnOne.addEventListener('click', (e) => safeRun(() => {
+        e.preventDefault();
+        output.innerHTML = '';
+        const d = normalizeUrl(singleInput.value.trim());
+        if(!d){ alert('Bitte gib eine gültige URL ein.'); return; }
+        const res = scoreUrl(d.href);
+        render(res);
+      }));
+
+      btnList.addEventListener('click', (e) => safeRun(() => {
+        e.preventDefault();
+        output.innerHTML = '';
+        const lines = listArea.value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+        if(!lines.length){ alert('Bitte gib mindestens eine URL ein.'); return; }
+        lines.forEach(line => {
+          const d = normalizeUrl(line);
+          if(!d) return;
+          const res = scoreUrl(d.href);
+          render(res);
+        });
+      }));
+    });
+  </script>
+</body>
+</html>
