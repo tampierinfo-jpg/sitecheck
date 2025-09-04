@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SiteCheck – iPad</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f9; padding: 20px; }
+    .box { background: white; padding: 20px; border-radius: 12px; max-width: 600px; margin: auto; }
+    input, textarea { width: 100%; padding: 10px; margin: 10px 0; border-radius: 6px; border: 1px solid #ccc; }
+    button { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+    button:hover { background: #1d4ed8; }
+    .result { margin-top: 20px; padding: 15px; border-radius: 8px; }
+    .ok { background: #bbf7d0; }
+    .warn { background: #fef08a; }
+    .bad { background: #fecaca; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>🔍 SiteCheck</h1>
+    <p>Gib eine URL ein und prüfe, ob sie sicher wirkt:</p>
+    <input type="text" id="urlInput" placeholder="https://beispiel.de">
+    <button onclick="checkURL()">Prüfen</button>
+    <div id="result" class="result"></div>
+  </div>
+
+  <script>
+    function checkURL() {
+      const url = document.getElementById("urlInput").value.trim();
+      const resultDiv = document.getElementById("result");
+
+      if (!url) {
+        resultDiv.textContent = "Bitte gib eine URL ein!";
+        resultDiv.className = "result warn";
+        return;
+      }
+
+      if (url.startsWith("https://")) {
+        resultDiv.textContent = "✅ OK – HTTPS gefunden!";
+        resultDiv.className = "result ok";
+      } else if (url.startsWith("http://")) {
+        resultDiv.textContent = "⚠️ Vorsicht – nur HTTP, nicht verschlüsselt!";
+        resultDiv.className = "result warn";
+      } else {
+        resultDiv.textContent = "❌ Ungültige Eingabe!";
+        resultDiv.className = "result bad";
+      }
+    }
+  </script>
+</body>
+</html>
