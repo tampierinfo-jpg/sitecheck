@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SiteCheck – iPad</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .container {
+            max-width: 700px;
+            margin: auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        textarea, input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #3498db;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .ok { background-color: #d4edda; color: #155724; }
+        .warn { background-color: #fff3cd; color: #856404; }
+        .danger { background-color: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 SiteCheck – iPad</h1>
+        <p>Schneller Sicherheits-Check – offline, ohne API</p>
+        
+        <h3>Einzel-URL prüfen</h3>
+        <input type="text" id="singleUrl" placeholder="https://beispiel.de/login">
+        <button onclick="checkSingle()">Prüfen</button>
+        
+        <h3>Liste prüfen (mehrere URLs)</h3>
+        <textarea id="urlList" rows="5" placeholder="https://beispiel1.de
+https://beispiel2.de"></textarea>
+        <button onclick="checkList()">Liste prüfen</button>
+
+        <div id="results"></div>
+    </div>
+
+<script>
+function analyzeUrl(url) {
+    let reasons = [];
+    let score = 0;
+    try {
+        let host = new URL(url).hostname;
+        if (!url.startsWith("https://")) {
+            score += 25;
+            reasons.push("❌ Kein HTTPS");
+        }
+        if (host.length > 20) {
+            score += 10;
+            reasons.push("⚠️ Lange Domain");
+        }
+        if (host.includes("paypal") || host.includes("login") || host.includes("secure")) {
+            score += 30;
+            reasons.push("⚠️ Verdächtige Wörter");
+        }
+        let label = "OK";
+        let cssClass = "ok";
+        if (score >= 30 && score < 60) {
+            label = "Vorsicht";
+            cssClass = "warn";
+        } else if (score >= 60) {
+            label = "Gefährlich";
+            cssClass = "danger";
+        }
+        return {url, score, label, reasons, cssClass};
+    } catch {
+        return {url, score: 100, label: "Ungültige URL", reasons: ["Eingabe konnte nicht geprüft werden"], cssClass: "danger"};
+    }
+}
+
+function checkSingle() {
+    let url = document.getElementById("singleUrl").value.trim();
+    if (!url) return;
+    let result = analyzeUrl(url);
+    showResults([result]);
+}
+
+function checkList() {
+    let urls = document.getElementById("urlList").value.trim().split(/\n+/);
+    let results = urls.map(u => analyzeUrl(u.trim())).filter(r => r.url);
+    showResults(results);
+}
+
+function showResults(results) {
+    let output = "";
+    results.forEach(r => {
+        output += `<div class="result ${r.cssClass}"><strong>${r.url}</strong><br>Score: ${r.score}/100 → ${r.label}<br>${r.reasons.join("<br>")}</div>`;
+    });
+    document.getElementById("results").innerHTML = output;
+}
+</script>
+</body>
+</html>
