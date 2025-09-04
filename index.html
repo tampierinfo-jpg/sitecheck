@@ -1,189 +1,236 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>SiteCheck – iPad</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f3f4f6;
-      padding: 20px;
+    :root{
+      --bg:#f6f7fb; --card:#ffffff; --text:#111827;
+      --ok:#d1fae5; --warn:#fef3c7; --bad:#fee2e2; --muted:#6b7280;
+      --blue:#2563eb;
     }
-
-    .wrap {
-      max-width: 600px;
-      margin: auto;
-    }
-
-    .card {
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    h1 {
-      text-align: center;
-      color: #333;
-    }
-
-    input, textarea {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
-
-    button {
-      padding: 12px 20px;
-      background: #2563eb;
-      border: none;
-      border-radius: 6px;
-      color: white;
-      font-size: 14px;
-      cursor: pointer;
-    }
-
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .result {
-      margin-top: 20px;
-      padding: 15px;
-      border-radius: 8px;
-    }
-
-    .ok {
-      background: #d1fae5;
-      color: #065f46;
-    }
-
-    .warn {
-      background: #fef3c7;
-      color: #92400e;
-    }
-
-    .bad {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    /* Ampel */
-    .ampel {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      margin: 15px 0;
-    }
-    .ampel div {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      opacity: .25;
-      transition: opacity .2s, transform .2s;
-    }
-    .ampel .red { background: #e74c3c; }
-    .ampel .yellow { background: #f1c40f; }
-    .ampel .green { background: #2ecc71; }
-    .ampel .on {
-      opacity: 1;
-      transform: scale(1.05);
-      box-shadow: 0 0 0 3px rgba(0,0,0,.05);
-    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif; background:var(--bg); color:var(--text)}
+    .wrap{max-width:780px; margin:40px auto; padding:0 16px}
+    .card{background:var(--card); border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,.06); padding:24px}
+    h1{display:flex; align-items:center; gap:12px; margin:0 0 8px; font-size:32px}
+    h1 .lock{font-size:28px}
+    p.muted{margin:0 0 20px; color:var(--muted)}
+    .row{display:flex; gap:12px}
+    input,textarea{width:100%; font:inherit; padding:12px 14px; border:1px solid #e5e7eb; border-radius:10px; outline:none}
+    input:focus,textarea:focus{border-color:#cbd5e1; box-shadow:0 0 0 3px #e2e8f0}
+    textarea{min-height:130px; resize:vertical}
+    button{padding:12px 16px; border:0; border-radius:10px; background:var(--blue); color:#fff; font-weight:600; cursor:pointer}
+    button:disabled{opacity:.55; cursor:not-allowed}
+    .result{margin-top:18px; padding:14px 16px; border-radius:12px; line-height:1.45}
+    .ok{background:var(--ok)}
+    .warn{background:var(--warn)}
+    .bad{background:var(--bad)}
+    .muted-sm{color:var(--muted); font-size:14px}
+    /* — Ampel — */
+    .traffic{display:flex; gap:10px; justify-content:center; margin:6px 0 18px}
+    .lamp{width:14px; height:14px; border-radius:50%; opacity:.35; transition:opacity .2s ease, transform .15s ease}
+    .lamp.on{opacity:1; transform:scale(1.05)}
+    .lamp.red{background:#ef4444}
+    .lamp.yellow{background:#f59e0b}
+    .lamp.green{background:#10b981}
+    .section{margin-top:20px}
+    .title{font-weight:700; margin-bottom:8px}
+    .reasons{margin-top:6px}
+    .reasons li{margin:0 0 4px 20px}
+    .small{font-size:13px}
+    .spacer{height:4px}
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>🔒 SiteCheck – iPad</h1>
+      <h1><span class="lock">🔒</span> SiteCheck – iPad</h1>
+      <p class="muted">Prüfe, ob eine URL unauffällig ist. Hinweis: heuristische Einschätzung – kein Ersatz für gesunden Menschenverstand.</p>
 
       <!-- Ampel -->
-      <div class="ampel">
-        <div class="red"></div>
-        <div class="yellow"></div>
-        <div class="green"></div>
+      <div class="traffic" aria-label="Status-Ampel">
+        <div id="lamp-r" class="lamp red"></div>
+        <div id="lamp-y" class="lamp yellow"></div>
+        <div id="lamp-g" class="lamp green on"></div>
       </div>
 
-      <input id="singleInput" type="text" placeholder="https://beispiel.de">
-      <button id="btnOne">Prüfen</button>
+      <!-- Einzel-URL -->
+      <div class="section">
+        <div class="row">
+          <input id="single" type="text" placeholder="https://beispiel.de/login" />
+          <button id="checkOne">Prüfen</button>
+        </div>
+      </div>
 
-      <h3>Liste prüfen</h3>
-      <textarea id="listArea" placeholder="Eine URL pro Zeile"></textarea>
-      <button id="btnList">Liste prüfen</button>
+      <!-- Liste -->
+      <div class="section">
+        <div class="title">Liste prüfen</div>
+        <textarea id="list" placeholder="Eine URL pro Zeile"></textarea>
+        <div class="spacer"></div>
+        <button id="checkList">Liste prüfen</button>
+      </div>
 
-      <div id="output"></div>
+      <!-- Ausgaben -->
+      <div id="out"></div>
+
+      <p class="muted-sm small">Tipp: Du kannst Domains ohne Protokoll eingeben (z. B. <code>paypal.com</code>), wir ergänzen automatisch <code>https://</code>.</p>
     </div>
   </div>
 
   <script>
-    const btnOne = document.getElementById("btnOne");
-    const btnList = document.getElementById("btnList");
-    const singleInput = document.getElementById("singleInput");
-    const listArea = document.getElementById("listArea");
-    const out = document.getElementById("output");
+    // --- Konfiguration --------------------------------------------------------
+    // Bekannte Fake-/Phishing-Domains (Beispiele – du kannst erweitern)
+    const BLACKLIST = [
+      "paypa1.com",
+      "secure-paypal-login.com",
+      "amaz0n-support.net",
+      "bank-login-verification.xyz",
+      "sparkasse-kundenservice.top"
+    ];
 
-    const ampel = {
-      red: document.querySelector(".ampel .red"),
-      yellow: document.querySelector(".ampel .yellow"),
-      green: document.querySelector(".ampel .green")
-    };
+    // TLDs, die häufig für Müll/Phishing missbraucht werden (nicht immer böse!)
+    const SUS_TLDS = ["xyz","top","tk","gq","cf","work","zip"];
 
-    function setAmpel(color) {
-      Object.values(ampel).forEach(l => l.classList.remove("on"));
-      if (color && ampel[color]) ampel[color].classList.add("on");
-    }
+    // Einfache Muster für „Lookalikes“ (1 statt l, rn statt m usw.)
+    const LOOKALIKE_PATTERNS = [
+      { brand: "paypal", test: /(paypa1|paypai|pay-pal)/ },
+      { brand: "amazon", test: /(amaz0n|arnazon)/ },
+      { brand: "sparkasse", test: /(sparkassse|sparkasses|sparka5se)/ },
+      { brand: "apple", test: /(app1e|appIe|appl3)/ },
+      { brand: "google", test: /(g00gle|goog1e)/ },
+    ];
 
-    function normalizeUrl(url) {
+    // --- Hilfsfunktionen ------------------------------------------------------
+    function normalizeUrl(input) {
+      if (!input) return null;
+      let s = input.trim();
+      if (!/^https?:\/\//i.test(s)) s = "https://" + s;
       try {
-        if (!/^https?:\/\//i.test(url)) {
-          url = "https://" + url;
-        }
-        return new URL(url);
+        const u = new URL(s);
+        // Nur hostname + optionaler Pfad; Query/Hash ignorieren
+        return u;
       } catch {
         return null;
       }
     }
 
-    function score(u) {
-      if (!u) return { status: "bad", msg: "Ungültige URL" };
-      if (u.protocol !== "https:") {
-        return { status: "warn", msg: "Kein HTTPS" };
-      }
-      return { status: "ok", msg: "OK" };
+    function host(u) { return u.hostname.toLowerCase(); }
+
+    function baseDomain(h) {
+      // Grob: nimm die letzten zwei Labels (example.com, paypal.com, amazon.de)
+      const parts = h.split(".");
+      if (parts.length <= 2) return h;
+      return parts.slice(-2).join(".");
     }
 
-    function render(res, url) {
-      out.innerHTML = `
-        <div class="result ${res.status}">
-          <b>${url}</b><br>Status: ${res.msg}
-        </div>
-      `;
-      setAmpel(res.status === "ok" ? "green" : res.status === "warn" ? "yellow" : "red");
+    function tld(h) { const p = h.split("."); return p[p.length-1] || ""; }
+
+    function countDigits(h){ return (h.match(/\d/g)||[]).length; }
+
+    function setTraffic(status){
+      // "ok" | "warn" | "bad"
+      const r = document.getElementById("lamp-r");
+      const y = document.getElementById("lamp-y");
+      const g = document.getElementById("lamp-g");
+      r.classList.remove("on"); y.classList.remove("on"); g.classList.remove("on");
+      if(status==="bad") r.classList.add("on");
+      else if(status==="warn") y.classList.add("on");
+      else g.classList.add("on");
     }
+
+    // Hauptbewertung
+    function score(u){
+      const h = host(u);
+      const bd = baseDomain(h);
+      const reasons = [];
+      let points = 0;
+
+      // 1) HTTPS
+      if (u.protocol !== "https:") { reasons.push("Kein HTTPS"); points += 40; }
+
+      // 2) Blacklist
+      if (BLACKLIST.includes(bd) || BLACKLIST.includes(h)) {
+        reasons.push("Bekannte Phishing-Domain");
+        points += 100;
+      }
+
+      // 3) Punycode
+      if (h.startsWith("xn--")) { reasons.push("Punycode-Domain"); points += 30; }
+
+      // 4) Verdächtige TLD
+      if (SUS_TLDS.includes(tld(h))) { reasons.push("Verdächtige TLD"); points += 20; }
+
+      // 5) Viele Zahlen
+      if (countDigits(h) >= 3) { reasons.push("Auffällig viele Zahlen in der Domain"); points += 15; }
+
+      // 6) Lange Domain
+      if (h.length > 25) { reasons.push("Sehr lange Domain"); points += 10; }
+
+      // 7) Lookalike-Muster (sehr simpel)
+      for (const pat of LOOKALIKE_PATTERNS) {
+        if (pat.test.test(h)) { reasons.push(`Sieht aus wie ${pat.brand} (Lookalike)`); points += 40; break; }
+      }
+
+      // Grenzen
+      if (points > 100) points = 100;
+
+      // Label / Ampel
+      let label = "OK", css = "ok", lamp = "ok";
+      if (points > 75) { label = "Gefährlich"; css = "bad"; lamp = "bad"; }
+      else if (points > 50) { label = "Riskant"; css = "warn"; lamp = "warn"; }
+      else if (points > 20) { label = "Vorsicht"; css = "warn"; lamp = "warn"; }
+
+      return { url: u.href, host: h, basedomain: bd, score: points, label, css, lamp, reasons };
+    }
+
+    function renderResult(container, res){
+      const div = document.createElement("div");
+      div.className = `result ${res.css}`;
+      div.innerHTML = `
+        <div><strong>${res.url}</strong></div>
+        <div>Status: ${res.label}</div>
+        ${res.reasons.length ? `<ul class="reasons">${res.reasons.map(r=>`<li>${r}</li>`).join("")}</ul>` : ""}
+      `;
+      container.appendChild(div);
+    }
+
+    // --- UI Logik -------------------------------------------------------------
+    const inputOne = document.getElementById("single");
+    const btnOne   = document.getElementById("checkOne");
+    const areaList = document.getElementById("list");
+    const btnList  = document.getElementById("checkList");
+    const out      = document.getElementById("out");
 
     btnOne.onclick = () => {
-      const d = normalizeUrl(singleInput.value);
-      const res = score(d);
-      render(res, singleInput.value);
+      out.innerHTML = "";
+      const u = normalizeUrl(inputOne.value);
+      if(!u){ alert("Bitte gib eine gültige URL ein."); return; }
+      const res = score(u);
+      setTraffic(res.lamp);
+      renderResult(out, res);
     };
 
     btnList.onclick = () => {
       out.innerHTML = "";
-      const lines = listArea.value.split(/\n/).map(s => s.trim()).filter(Boolean);
-      lines.forEach(line => {
-        const d = normalizeUrl(line);
-        const res = score(d);
-        out.innerHTML += `
-          <div class="result ${res.status}">
-            <b>${line}</b><br>Status: ${res.msg}
-          </div>
-        `;
+      const lines = areaList.value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+      if(!lines.length){ alert("Bitte gib mindestens eine URL ein."); return; }
+      // Für die Liste zeigt die Ampel den „schlimmsten“ Status an
+      let worst = "ok"; // ok < warn < bad
+      lines.forEach(line=>{
+        const u = normalizeUrl(line);
+        if(!u) return;
+        const res = score(u);
+        renderResult(out, res);
+        if(res.lamp==="bad") worst="bad";
+        else if(res.lamp==="warn" && worst!=="bad") worst="warn";
       });
+      setTraffic(worst);
     };
+
+    // Startzustand
+    setTraffic("ok");
   </script>
 </body>
 </html>
