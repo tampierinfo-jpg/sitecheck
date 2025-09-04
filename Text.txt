@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SiteCheck – iPad</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f3f4f6; padding: 20px; }
+    .box { background: white; padding: 20px; border-radius: 12px; max-width: 500px; margin: auto; }
+    input, textarea { width: 100%; padding: 10px; margin: 10px 0; border-radius: 8px; border: 1px solid #ccc; }
+    button { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+    button:hover { background: #1d4ed8; }
+    .result { margin-top: 20px; padding: 15px; border-radius: 8px; }
+    .ok { background: #bbf7d0; }
+    .warn { background: #fef08a; }
+    .bad { background: #fecaca; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>🔒 SiteCheck – iPad</h1>
+    <p>Prüfe eine URL auf Sicherheit.</p>
+    
+    <input type="url" id="singleUrl" placeholder="https://beispiel.de/login">
+    <button onclick="checkUrl()">Prüfen</button>
+    
+    <h3>Liste prüfen</h3>
+    <textarea id="multiUrls" rows="5" placeholder="Eine URL pro Zeile"></textarea>
+    <button onclick="checkList()">Liste prüfen</button>
+    
+    <div id="results"></div>
+  </div>
+  
+  <script>
+    function analyze(url) {
+      let result = { url, status: "OK", reasons: [] };
+      if (!url.startsWith("https")) { result.status = "Unsicher"; result.reasons.push("Kein HTTPS"); }
+      if (url.includes("paypal") || url.includes("login")) { result.status = "Warnung"; result.reasons.push("Verdächtiges Wort in URL"); }
+      return result;
+    }
+    
+    function checkUrl() {
+      const url = document.getElementById("singleUrl").value;
+      const res = analyze(url);
+      showResult([res]);
+    }
+    
+    function checkList() {
+      const urls = document.getElementById("multiUrls").value.split("\n");
+      const results = urls.filter(u => u.trim() !== "").map(u => analyze(u.trim()));
+      showResult(results);
+    }
+    
+    function showResult(results) {
+      const container = document.getElementById("results");
+      container.innerHTML = "";
+      results.forEach(r => {
+        const div = document.createElement("div");
+        div.className = "result " + (r.status === "OK" ? "ok" : r.status === "Warnung" ? "warn" : "bad");
+        div.innerHTML = `<b>${r.url}</b><br>Status: ${r.status}<br>${r.reasons.join(", ")}`;
+        container.appendChild(div);
+      });
+    }
+  </script>
+</body>
+</html>
