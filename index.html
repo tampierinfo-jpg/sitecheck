@@ -12,7 +12,7 @@
     }
     .wrap {
       max-width: 600px;
-      margin: 100px auto 0 auto; /* Platz lassen für die Ampel */
+      margin: 100px auto 0 auto;
       background: #fff;
       padding: 20px;
       border-radius: 10px;
@@ -48,7 +48,7 @@
     .warn { background: #fff3cd; color: #856404; }
     .bad { background: #f8d7da; color: #721c24; }
 
-    /* 🚦 Ampel rechts oben fest */
+    /* 🚦 Ampel rechts oben */
     .traffic {
       position: fixed;
       top: 10px;
@@ -80,7 +80,7 @@
     <h1>🔒 SiteCheck – iPad</h1>
 
     <input id="singleInput" placeholder="https://beispiel.de/login">
-    <button onclick="checkOne()">Prüfen</button>
+    <button id="checkOneBtn" onclick="checkOne()">Prüfen</button>
 
     <h3>Liste prüfen</h3>
     <textarea id="list" placeholder="Eine URL pro Zeile"></textarea>
@@ -171,9 +171,21 @@
       setTraffic(worst);
     }
 
+    // ✅ Auto-Check aus URL-Parameter (?u=...)
+    (function autoFromQuery(){
+      const p = new URLSearchParams(location.search);
+      const u = p.get('u');
+      if (!u) return;
+      const inp = document.getElementById('singleInput');
+      if (inp) {
+        inp.value = u;
+        const btn = document.getElementById('checkOneBtn');
+        if (btn) btn.click();
+      }
+    })();
+
     // Startzustand
     setTraffic("green");
   </script>
 </body>
-</html> 
-  
+</html>
