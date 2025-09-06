@@ -97,7 +97,7 @@
     const LOOKALIKE_PATTERNS = [
       { brand: "paypal", test: /(paypa1|paypai|pay-pal)/ },
       { brand: "amazon", test: /(amaz0n|arnazon)/ },
-      { brand: "sparkasse", test: /(sparkassse|sparkasses|sparka5se)/ },
+    Y  { brand: "sparkasse", test: /(sparkassse|sparkasses|sparka5se)/ },
       { brand: "apple", test: /(app1e|appIe|appl3)/ },
       { brand: "google", test: /(g00gle|goog1e)/ },
     ];
@@ -202,7 +202,43 @@
     const areaList = document.getElementById("list");
     const btnList  = document.getElementById("checkList");
     const out      = document.getElementById("out");
+ // Einzel-Button
+btnOne.onclick = () => {
+  out.innerHTML = '';
+  const d = normalizeUrl(singleInput.value);
+  if (!d) { 
+    alert('Bitte gib eine gültige URL ein.'); 
+    return; 
+  }
 
+  // ➡️ NEUER TEIL: Blacklist-Prüfung
+  if (isBlacklisted(d.href)) {
+    setTraffic("bad");   // 🚦 Ampel sofort auf Rot
+    out.innerHTML = `<div class="bad">${d.href}<br>Status: Gefährlich (Blacklist)</div>`;
+    return; // Prüfung hier stoppen
+  }
+
+  const res = score(d);
+  setTraffic(res.lamp);
+  renderResult(out, res);
+}; // Einzel-Button
+btnOne.onclick = () => {
+  out.innerHTML = '';
+  const d = normalizeUrl(singleInput.value);
+  if (!d) { alert('Bitte gib eine gültige URL ein.'); return; }
+
+  // ➡️ NEUER TEIL: Blacklist-Prüfung
+  if (isBlacklisted(d.href)) {
+    setTraffic("bad");   // 🚦 Ampel sofort auf Rot
+    out.innerHTML = `<div class="bad">${d.href}<br>Status: Gefährlich (Blacklist)</div>`;
+    return; // Prüfung hier stoppen
+  }
+
+  // wenn nicht auf Blacklist → normal weiter
+  const res = score(d);
+  res.url = d.href;
+  render(res);
+};
     btnOne.onclick = () => {
       out.innerHTML = "";
       const u = normalizeUrl(inputOne.value);
