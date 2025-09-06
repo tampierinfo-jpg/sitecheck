@@ -6,55 +6,56 @@
   <title>SiteCheck – iPad</title>
 
   <style>
-    body { 
-      font-family: Arial, sans-serif; 
-      background:#f4f4f9; 
-      padding:20px; 
+    body{
+      font-family: Arial, sans-serif;
+      background:#f4f4f9;
+      padding:20px;
     }
-    .wrap { 
-      max-width:600px; 
-      margin:0 auto; 
-      background:#fff; 
-      padding:20px; 
-      border-radius:10px; 
+    .wrap{
+      max-width:600px;
+      margin:0 auto;
+      background:#fff;
+      padding:20px;
+      border-radius:10px;
+      box-shadow:0 4px 16px rgba(0,0,0,.06);
     }
-    h1 { text-align:center; }
+    h1{ text-align:center; margin-top:0; }
 
-    /* Eingabefelder größer */
-    input, textarea { 
-      width:100%; 
-      padding:15px; 
-      margin:12px 0; 
-      border-radius:5px; 
-      border:1px solid #ccc; 
-      font-size:23px;   /* Schriftgröße */
-      height:55px;      /* Höhe */
+    /* Eingaben groß & gut antippbar */
+    input, textarea{
+      width:100%;
+      padding:15px;
+      margin:12px 0;
+      border-radius:8px;
+      border:1px solid #ccc;
+      font-size:23px;       /* größere Schrift beim Tippen */
     }
+    textarea{ min-height:120px; }
 
     /* Buttons größer */
-    button { 
-      padding:12px 24px; 
-      margin:8px; 
-      cursor:pointer; 
-      font-size:20px; 
+    button{
+      padding:12px 24px;
+      margin:8px 0;
+      cursor:pointer;
+      font-size:20px;
+      border-radius:10px;
+      border:1px solid #2e6de8;
+      background:#3b82f6;
+      color:#fff;
     }
 
-    .result { 
-      margin-top:15px; 
-      padding:12px; 
-      border-radius:5px; 
-      font-size:20px;   /* Ergebnis-Text größer */
-    }
-    .ok    { background:#d4edda; color:#155724; }
-    .warn  { background:#fff3cd; color:#856404; }
-    .bad   { background:#f8d7da; color:#721c24; }
+    /* Ergebnisboxen */
+    .result{ margin-top:15px; padding:12px; border-radius:8px; font-size:20px; }
+    .ok{    background:#d4edda; color:#155724; }
+    .warn{  background:#fff3cd; color:#856404; }
+    .bad{   background:#f8d7da; color:#721c24; }
 
     /* Ampel */
-    .traffic { display:flex; justify-content:center; margin:15px 0; }
-    .light   { width:20px; height:20px; border-radius:50%; margin:0 5px; background:#ccc; }
-    .red     { background:red; }
-    .yellow  { background:orange; }
-    .green   { background:green; }
+    .traffic{ display:flex; justify-content:center; gap:10px; margin:15px 0; }
+    .light{ width:20px; height:20px; border-radius:50%; background:#ccc; }
+    .red{    background:red; }
+    .yellow{ background:orange; }
+    .green{  background:green; }
   </style>
 </head>
 <body>
@@ -68,7 +69,7 @@
       <div id="green" class="light"></div>
     </div>
 
-    <!-- Eingabe -->
+    <!-- Einzel-URL -->
     <input id="single" type="text" placeholder="https://beispiel.de/login">
     <button id="checkOne">Prüfen</button>
 
@@ -76,89 +77,92 @@
     <textarea id="list" placeholder="Eine URL pro Zeile"></textarea>
     <button id="checkList">Liste prüfen</button>
 
-    <!-- Ergebnis -->
     <div id="out"></div>
   </div>
 
   <script>
     // Elemente
     const inputOne = document.getElementById("single");
-    const btnOne = document.getElementById("checkOne");
+    const btnOne   = document.getElementById("checkOne");
     const areaList = document.getElementById("list");
-    const btnList = document.getElementById("checkList");
-    const out = document.getElementById("out");
+    const btnList  = document.getElementById("checkList");
+    const out      = document.getElementById("out");
 
-    // Ampel
-    function setTraffic(status) {
-      document.getElementById("red").className = "light";
+    // Ampel setzen
+    function setTraffic(state){
+      document.getElementById("red").className    = "light";
       document.getElementById("yellow").className = "light";
-      document.getElementById("green").className = "light";
-      if (status === "bad") document.getElementById("red").classList.add("red");
-      if (status === "warn") document.getElementById("yellow").classList.add("yellow");
-      if (status === "ok") document.getElementById("green").classList.add("green");
+      document.getElementById("green").className  = "light";
+      if(state==="bad")   document.getElementById("red").classList.add("red");
+      if(state==="warn")  document.getElementById("yellow").classList.add("yellow");
+      if(state==="ok")    document.getElementById("green").classList.add("green");
     }
 
     // Ergebnis anzeigen
-    function renderResult(container, res) {
+    function renderResult(container, res){
       const div = document.createElement("div");
-      div.className = res.lamp;
+      div.className = "result " + res.lamp;
       div.innerHTML = `<strong>${res.url}</strong><br>Status: ${res.label}`;
       container.appendChild(div);
     }
 
+    // https:// davor setzen, wenn Nutzer nur "domain.de" eingibt
+    function ensureUrl(s){
+      let t = (s||"").trim();
+      if(!/^https?:\/\//i.test(t)) t = "https://" + t;
+      return t;
+    }
+
     // Blacklist laden
     let blacklist = [];
-    fetch('blacklist.json')
-      .then(res => res.json())
-      .then(data => { blacklist = data.domains; })
-      .catch(err => console.error("Fehler beim Laden der Blacklist:", err));
+    fetch("blacklist.json")
+      .then(r => r.json())
+      .then(data => blacklist = data.domains || [])
+      .catch(e => console.error("Blacklist konnte nicht geladen werden:", e));
 
-    function isBlacklisted(url) {
-      try {
-        const hostname = new URL(url).hostname.replace("www.", "");
-        return blacklist.some(domain => hostname.endsWith(domain));
-      } catch {
-        return false;
-      }
+    // Domain mit Blacklist vergleichen
+    function isBlacklisted(url){
+      try{
+        const host = new URL(url).hostname.replace(/^www\./,"");
+        return blacklist.some(d => host.endsWith(d));
+      }catch(_){ return false; }
     }
 
-    // URL prüfen
-    function score(u) {
-      if (isBlacklisted(u)) return { url:u, lamp:"bad", label:"Gefährlich (Blacklist)" };
-      return { url:u, lamp:"ok", label:"OK" };
+    // Bewertung
+    function score(u){
+      if(isBlacklisted(u)) return { url:u, lamp:"bad",  label:"Gefährlich (Blacklist)" };
+      return                    { url:u, lamp:"ok",   label:"OK" };
     }
 
-    // Einzel-Prüfung
-    btnOne.onclick = () => {
+    // Einzelprüfung
+    btnOne.onclick = ()=>{
       out.innerHTML = "";
-      const u = inputOne.value.trim();
-      if (!u) { alert("Bitte gib eine gültige URL ein."); return; }
+      const u = ensureUrl(inputOne.value);
+      if(!u){ alert("Bitte gib eine gültige URL ein."); return; }
       const res = score(u);
       setTraffic(res.lamp);
-      renderResult(out, res);
+      renderResult(out,res);
     };
 
-    // Liste prüfen
-    btnList.onclick = () => {
+    // Listenprüfung
+    btnList.onclick = ()=>{
       out.innerHTML = "";
       const lines = areaList.value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
-      if (!lines.length) { alert("Bitte gib mindestens eine URL ein."); return; }
+      if(!lines.length){ alert("Bitte gib mindestens eine URL ein."); return; }
+
       let worst = "ok";
-      lines.forEach(line => {
-        const res = score(line);
-        renderResult(out, res);
-        if (res.lamp === "bad") worst = "bad";
-        else if (res.lamp === "warn" && worst !== "bad") worst = "warn";
-      });
+      for(const line of lines){
+        const u = ensureUrl(line);
+        const res = score(u);
+        renderResult(out,res);
+        if(res.lamp==="bad") worst="bad";
+        else if(res.lamp==="warn" && worst!=="bad") worst="warn";
+      }
       setTraffic(worst);
     };
 
-    // Start
+    // Startzustand
     setTraffic("ok");
   </script>
 </body>
 </html>
-
-     
-
-   
