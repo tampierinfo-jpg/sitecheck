@@ -231,6 +231,26 @@
 
     // Startzustand
     setTraffic("ok");
-  </script>
+  let blacklist = [];
+
+// Blacklist laden
+fetch('blacklist.json')
+  .then(res => res.json())
+  .then(data => {
+    blacklist = data.domains;
+    console.log("Blacklist geladen:", blacklist);
+  })
+  .catch(err => console.error("Fehler beim Laden der Blacklist:", err));
+
+// Prüfen ob Domain auf Blacklist ist
+function isBlacklisted(url) {
+  try {
+    const hostname = new URL(url).hostname.replace("www.", "");
+    return blacklist.some(domain => hostname.endsWith(domain));
+  } catch {
+    return false;
+  }
+}
+</script>
 </body>
 </html>
