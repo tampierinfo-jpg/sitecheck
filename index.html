@@ -12,7 +12,7 @@
     }
     .wrap {
       max-width: 600px;
-      margin: 0 auto;
+      margin: 100px auto 0 auto; /* Platz lassen für die Ampel */
       background: #fff;
       padding: 20px;
       border-radius: 10px;
@@ -48,18 +48,19 @@
     .warn { background: #fff3cd; color: #856404; }
     .bad { background: #f8d7da; color: #721c24; }
 
-    /* 🚦 Ampel links oben fest */
+    /* 🚦 Ampel oben mittig */
     .traffic {
       position: fixed;
       top: 10px;
-      left: 10px;
+      left: 50%;
+      transform: translateX(-50%);
       display: flex;
       gap: 5px;
       z-index: 9999;
     }
     .light {
-      width: 20px;
-      height: 20px;
+      width: 25px;
+      height: 25px;
       border-radius: 50%;
       background: #ccc;
     }
@@ -90,12 +91,10 @@
   </div>
 
   <script>
-    // Offizielle sichere Domains
     const SAFE_DOMAINS = [
       "sparkasse.de"
     ];
 
-    // Gefährliche Domains
     const BLACKLIST = [
       "sparkassse.de",
       "sparkassse.com",
@@ -108,20 +107,28 @@
       "dhl-paket-verfolgung.top"
     ];
 
-    // Ampel steuern
     function setTraffic(color) {
       document.getElementById("red").style.background = (color==="red" ? "red" : "#ccc");
       document.getElementById("yellow").style.background = (color==="yellow" ? "orange" : "#ccc");
       document.getElementById("green").style.background = (color==="green" ? "green" : "#ccc");
     }
 
-    // URL normalisieren
     function normalizeUrl(url) {
       try { return new URL(url.startsWith("http") ? url : "https://" + url); }
       catch { return null; }
     }
 
-    // Einzelprüfung
+    function checkDomain(hostname) {
+      const h = hostname.toLowerCase();
+      if (BLACKLIST.includes(h)) {
+        return { status: "Gefährlich (Blacklist)", lamp: "red" };
+      }
+      if (SAFE_DOMAINS.includes(h)) {
+        return { status: "Offiziell", lamp: "green" };
+      }
+      return { status: "Unauffällig", lamp: "green" };
+    }
+
     function checkOne() {
       const input = document.getElementById("singleInput").value;
       const out = document.getElementById("out");
@@ -135,10 +142,9 @@
 
       const res = checkDomain(u.hostname);
       setTraffic(res.lamp);
-      out.innerHTML = `<div class="${res.lamp}">${input}<br>Status: ${res.status}</div>`;
+      out.innerHTML = `<div class="result ${res.lamp}">${input}<br>Status: ${res.status}</div>`;
     }
 
-    // Mehrfachprüfung
     function checkList() {
       const lines = document.getElementById("list").value.split(/\n+/).map(s => s.trim()).filter(Boolean);
       const out = document.getElementById("out");
@@ -154,7 +160,11 @@
         const u = normalizeUrl(line);
         if (!u) return;
         const res = checkDomain(u.hostname);
-        renderResult(out, line, res);
+        const div = document.createElement("div");
+        div.className = "result " + res.lamp;
+        div.innerHTML = `${line}<br>Status: ${res.status}`;
+        out.appendChild(div);
+
         if (res.lamp === "red") worst = "red";
         else if (res.lamp === "yellow" && worst !== "red") worst = "yellow";
       });
@@ -162,29 +172,9 @@
       setTraffic(worst);
     }
 
-    // Ergebnisse anzeigen
-    function renderResult(container, line, res) {
-      const div = document.createElement("div");
-      div.className = "result " + res.lamp;
-      div.innerHTML = `${line}<br>Status: ${res.status}`;
-      container.appendChild(div);
-    }
-
-    // Domain prüfen
-    function checkDomain(hostname) {
-      const h = hostname.toLowerCase();
-
-      if (BLACKLIST.includes(h)) {
-        return { status: "Gefährlich (Blacklist)", lamp: "red" };
-      }
-      if (SAFE_DOMAINS.includes(h)) {
-        return { status: "Offiziell", lamp: "green" };
-      }
-      return { status: "Unauffällig", lamp: "green" };
-    }
-
     // Startzustand
     setTraffic("green");
   </script>
 </body>
 </html>
+    
