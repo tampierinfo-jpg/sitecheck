@@ -1,19 +1,137 @@
-{
-  "version": "2025-09-06T12:00:00Z",
-  "domains": [
-    "paypa1.com",
-    "secure-paypal-login.com",
-    "bank-login-verification.xyz",
-    "sparkasse-kundenservice.top",
-    "amaz0n-support.net"
-    "paypal-kundencenter.xyz",
-    "sparkassse.de",
-    "amaz0n-konto.net",
-    "dhl-paket-verfolgung.top",
-    "domains": [
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SiteCheck – iPad</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f4f4f9; padding:20px; }
+    .wrap { max-width:600px; margin:0 auto; background:#fff; padding:20px; border-radius:10px; }
+    h1 { text-align:center; }
+    input, textarea { width:100%; padding:12px; margin:10px 0; border-radius:5px; border:1px solid #ccc; font-size:20px; }
+    button { padding:12px 20px; margin:5px; cursor:pointer; background:#007bff; color:white; border:none; border-radius:5px; font-size:18px; }
+    .result { margin-top:15px; padding:12px; border-radius:5px; font-size:18px; }
+    .ok { background:#d4edda; color:#155724; }
+    .bad { background:#f8d7da; color:#721c24; }
+    .warn { background:#fff3cd; color:#856404; }
+    /* Ampel */
+    .traffic { display:flex; justify-content:center; margin:15px 0; }
+    .light { width:20px; height:20px; border-radius:50%; margin:0 5px; background:#ccc; }
+    .red { background:red; }
+    .yellow { background:orange; }
+    .green { background:green; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>🔒 SiteCheck – iPad</h1>
+    <div class="traffic">
+      <div class="light" id="red"></div>
+      <div class="light" id="yellow"></div>
+      <div class="light" id="green"></div>
+    </div>
+
+    <input type="text" id="single" placeholder="https://beispiel.de/login">
+    <button onclick="checkOne()">Prüfen</button>
+
+    <h3>Liste prüfen</h3>
+    <textarea id="list" placeholder="Eine URL pro Zeile"></textarea>
+    <button onclick="checkList()">Liste prüfen</button>
+
+    <div id="out"></div>
+  </div>
+
+<script>
+  // Offizielle erlaubte Domains
+  const SAFE_DOMAINS = [
+    "sparkasse.de",
+    "paypal.com",
+    "amazon.de",
+    "dhl.de"
+  ];
+
+  // Gefährliche Domains (Blacklist – 30 Stück)
+  const BLACKLIST = [
     "sparkassse.de",
     "sparkassse.com",
-    "sparkassse.net"
-]
-  ]
-}
+    "paypa1.com",
+    "paypal-kundencenter.xyz",
+    "secure-paypal-login.com",
+    "paypal-verifizierung.net",
+    "paypal-update.info",
+    "bank-login-verification.xyz",
+    "bankkunden-service.top",
+    "banking-secure-login.net",
+    "onlinebank-verifikation.xyz",
+    "sparkasse-kundenservice.top",
+    "sicher-sparkasse-login.net",
+    "sparkasse-service-verifikation.xyz",
+    "amaz0n-support.net",
+    "amaz0n-konto.net",
+    "amazon-service-verifikation.xyz",
+    "amazon-kundenservice.top",
+    "amazon-prime-check.net",
+    "dhl-paket-verfolgung.top",
+    "dhl-verfolgung-service.xyz",
+    "dhl-service-kunden.net",
+    "paket-verfolgung-dhl.info",
+    "dhl-tracking-secure.net",
+    "post-dhl-service.xyz",
+    "commerzbank-login-verifizierung.xyz",
+    "ing-diba-kundenservice.top",
+    "deutschebank-verifikation.net",
+    "volksbank-service.xyz",
+    "kreditkarten-check.net"
+  ];
+
+  function setTraffic(color) {
+    document.getElementById("red").style.background = (color==="red" ? "red" : "#ccc");
+    document.getElementById("yellow").style.background = (color==="yellow" ? "orange" : "#ccc");
+    document.getElementById("green").style.background = (color==="green" ? "green" : "#ccc");
+  }
+
+  function normalizeUrl(url) {
+    try { return new URL(url.startsWith("http")? url : "https://"+url); }
+    catch { return null; }
+  }
+
+  function checkDomain(url) {
+    const u = normalizeUrl(url);
+    if(!u) return {status:"Ungültige Eingabe", lamp:"yellow"};
+    const hostname = u.hostname.toLowerCase();
+
+    if(BLACKLIST.includes(hostname)) {
+      return {status:"⚠️ Gefährlich (Blacklist)", lamp:"red"};
+    }
+
+    if(SAFE_DOMAINS.includes(hostname)) {
+      return {status:"✅ Unauffällig", lamp:"green"};
+    }
+
+    return {status:"❓ Unbekannt – Vorsicht!", lamp:"yellow"};
+  }
+
+  function checkOne() {
+    const input = document.getElementById("single").value;
+    const res = checkDomain(input);
+    setTraffic(res.lamp);
+    document.getElementById("out").innerHTML =
+      `<div class="result ${res.lamp==='red'?'bad':(res.lamp==='yellow'?'warn':'ok')}">${input}<br>Status: ${res.status}</div>`;
+  }
+
+  function checkList() {
+    const lines = document.getElementById("list").value.split("\n").map(l=>l.trim()).filter(Boolean);
+    let outHtml = "";
+    let worst = "green";
+    lines.forEach(line => {
+      const res = checkDomain(line);
+      if(res.lamp==="red") worst = "red";
+      else if(res.lamp==="yellow" && worst!=="red") worst = "yellow";
+      outHtml += `<div class="result ${res.lamp==='red'?'bad':(res.lamp==='yellow'?'warn':'ok')}">${line}<br>Status: ${res.status}</div>`;
+    });
+    setTraffic(worst);
+    document.getElementById("out").innerHTML = outHtml;
+  }
+</script>
+</body>
+</html>
