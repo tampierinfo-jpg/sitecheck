@@ -1,292 +1,162 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SiteCheck – iPad</title>
   <style>
-    :root{
-      --bg:#f6f7fb; --card:#ffffff; --text:#111827;
-      --ok:#d1fae5; --warn:#fef3c7; --bad:#fee2e2; --muted:#6b7280;
-      --blue:#2563eb;
-    }
-    *{box-sizing:border-box}
-    body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif; background:var(--bg); color:var(--text)}
-    .wrap{max-width:780px; margin:40px auto; padding:0 16px}
-    .card{background:var(--card); border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,.06); padding:24px}
-    h1{display:flex; align-items:center; gap:12px; margin:0 0 8px; font-size:32px}
-    h1 .lock{font-size:28px}
-    p.muted{margin:0 0 20px; color:var(--muted)}
-    .row{display:flex; gap:12px}
-    input,textarea{width:100%; font:inherit; padding:12px 14px; border:1px solid #e5e7eb; border-radius:10px; outline:none}
-    input:focus,textarea:focus{border-color:#cbd5e1; box-shadow:0 0 0 3px #e2e8f0}
-    textarea{min-height:130px; resize:vertical}
-    button{padding:12px 16px; border:0; border-radius:10px; background:var(--blue); color:#fff; font-weight:600; cursor:pointer}
-    button:disabled{opacity:.55; cursor:not-allowed}
-    .result{margin-top:18px; padding:14px 16px; border-radius:12px; line-height:1.45}
-    .ok{background:var(--ok)}
-    .warn{background:var(--warn)}
-    .bad{background:var(--bad)}
-    .muted-sm{color:var(--muted); font-size:14px}
-    /* — Ampel — */
-    .traffic{display:flex; gap:10px; justify-content:center; margin:6px 0 18px}
-    .lamp{width:14px; height:14px; border-radius:50%; opacity:.35; transition:opacity .2s ease, transform .15s ease}
-    .lamp.on{opacity:1; transform:scale(1.05)}
-    .lamp.red{background:#ef4444}
-    .lamp.yellow{background:#f59e0b}
-    .lamp.green{background:#10b981}
-    .section{margin-top:20px}
-    .title{font-weight:700; margin-bottom:8px}
-    .reasons{margin-top:6px}
-    .reasons li{margin:0 0 4px 20px}
-    .small{font-size:13px}
-    .spacer{height:4px}
+    body { font-family: Arial, sans-serif; background:#f4f4f9; padding:20px; }
+    .wrap { max-width:600px; margin:0 auto; background:#fff; padding:20px; border-radius:10px; }
+    h1 { text-align:center; }
+    input, textarea { width:100%; padding:10px; margin:10px 0; border-radius:5px; border:1px solid #ccc; }
+    button { padding:10px 20px; margin:5px; cursor:pointer; }
+    .result { margin-top:15px; padding:10px; border-radius:5px; }
+    .ok { background:#d4edda; color:#155724; }
+    .warn { background:#fff3cd; color:#856404; }
+    .bad { background:#f8d7da; color:#721c24; }
+
+    /* Ampel */
+    .traffic { display:flex; justify-content:center; margin:15px 0; }
+    .light { width:20px; height:20px; border-radius:50%; margin:0 5px; background:#ccc; }
+    .red { background:red; }
+    .yellow { background:orange; }
+    .green { background:green; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="card">
-      <h1><span class="lock">🔒</span> SiteCheck – iPad</h1>
-      <p class="muted">Prüfe, ob eine URL unauffällig ist. Hinweis: heuristische Einschätzung – kein Ersatz für gesunden Menschenverstand.</p>
-
-      <!-- Ampel -->
-      <div class="traffic" aria-label="Status-Ampel">
-        <div id="lamp-r" class="lamp red"></div>
-        <div id="lamp-y" class="lamp yellow"></div>
-        <div id="lamp-g" class="lamp green on"></div>
-      </div>
-
-      <!-- Einzel-URL -->
-      <div class="section">
-        <div class="row">
-          <input id="single" type="text" placeholder="https://beispiel.de/login" />
-          <button id="checkOne">Prüfen</button>
-        </div>
-      </div>
-
-      <!-- Liste -->
-      <div class="section">
-        <div class="title">Liste prüfen</div>
-        <textarea id="list" placeholder="Eine URL pro Zeile"></textarea>
-        <div class="spacer"></div>
-        <button id="checkList">Liste prüfen</button>
-      </div>
-
-      <!-- Ausgaben -->
-      <div id="out"></div>
-
-      <p class="muted-sm small">Tipp: Du kannst Domains ohne Protokoll eingeben (z. B. <code>paypal.com</code>), wir ergänzen automatisch <code>https://</code>.</p>
+    <h1>🔒 SiteCheck – iPad</h1>
+    <div class="traffic">
+      <div id="red" class="light"></div>
+      <div id="yellow" class="light"></div>
+      <div id="green" class="light"></div>
     </div>
+
+    <input id="single" type="text" placeholder="https://beispiel.de/login">
+    <button id="checkOne">Prüfen</button>
+
+    <h3>Liste prüfen</h3>
+    <textarea id="list" rows="4" placeholder="Eine URL pro Zeile"></textarea>
+    <button id="checkList">Liste prüfen</button>
+
+    <div id="out"></div>
   </div>
 
   <script>
-    // --- Konfiguration --------------------------------------------------------
-    // Bekannte Fake-/Phishing-Domains (Beispiele – du kannst erweitern)
-    const BLACKLIST = [
-      "paypa1.com",
-      "secure-paypal-login.com",
-      "amaz0n-support.net",
-      "bank-login-verification.xyz",
-      "sparkasse-kundenservice.top"
-    ];
+    const inputOne = document.getElementById("single");
+    const btnOne = document.getElementById("checkOne");
+    const areaList = document.getElementById("list");
+    const btnList = document.getElementById("checkList");
+    const out = document.getElementById("out");
 
-    // TLDs, die häufig für Müll/Phishing missbraucht werden (nicht immer böse!)
-    const SUS_TLDS = ["xyz","top","tk","gq","cf","work","zip"];
+    const red = document.getElementById("red");
+    const yellow = document.getElementById("yellow");
+    const green = document.getElementById("green");
 
-    // Einfache Muster für „Lookalikes“ (1 statt l, rn statt m usw.)
+    // Ampel
+    function setTraffic(state) {
+      red.classList.remove("red");
+      yellow.classList.remove("yellow");
+      green.classList.remove("green");
+      if (state === "bad") red.classList.add("red");
+      else if (state === "warn") yellow.classList.add("yellow");
+      else green.classList.add("green");
+    }
+
+    // Blacklist laden
+    let blacklist = [];
+    fetch("blacklist.json")
+      .then(res => res.json())
+      .then(data => { blacklist = data.domains; })
+      .catch(err => console.error("Fehler beim Laden der Blacklist:", err));
+
+    function isBlacklisted(url) {
+      try {
+        const hostname = new URL(url).hostname.replace("www.", "");
+        return blacklist.some(domain => hostname.endsWith(domain));
+      } catch { return false; }
+    }
+
+    // Lookalike-Patterns
     const LOOKALIKE_PATTERNS = [
-      { brand: "paypal", test: /(paypa1|paypai|pay-pal)/ },
-      { brand: "amazon", test: /(amaz0n|arnazon)/ },
-    Y  { brand: "sparkasse", test: /(sparkassse|sparkasses|sparka5se)/ },
-      { brand: "apple", test: /(app1e|appIe|appl3)/ },
-      { brand: "google", test: /(g00gle|goog1e)/ },
+      { brand:"paypal", test: /(paypa1|pay-pal|paypai)/ },
+      { brand:"amazon", test: /(arnazon|amaz0n)/ },
+      { brand:"sparkasse", test: /(sparkassse|sparkasses|sparka5se)/ },
+      { brand:"apple", test: /(app1e|appl3|appIe)/ },
+      { brand:"google", test: /(g00gle|goog1e)/ }
     ];
 
-    // --- Hilfsfunktionen ------------------------------------------------------
+    // Eingabe normalisieren
     function normalizeUrl(input) {
       if (!input) return null;
       let s = input.trim();
       if (!/^https?:\/\//i.test(s)) s = "https://" + s;
-      try {
-        const u = new URL(s);
-        // Nur hostname + optionaler Pfad; Query/Hash ignorieren
-        return u;
-      } catch {
-        return null;
-      }
+      try { return new URL(s); } catch { return null; }
     }
 
-    function host(u) { return u.hostname.toLowerCase(); }
+    // Bewertung
+    function score(u) {
+      const res = { url: u.href, lamp:"ok", label:"OK", reasons:[] };
 
-    function baseDomain(h) {
-      // Grob: nimm die letzten zwei Labels (example.com, paypal.com, amazon.de)
-      const parts = h.split(".");
-      if (parts.length <= 2) return h;
-      return parts.slice(-2).join(".");
-    }
-
-    function tld(h) { const p = h.split("."); return p[p.length-1] || ""; }
-
-    function countDigits(h){ return (h.match(/\d/g)||[]).length; }
-
-    function setTraffic(status){
-      // "ok" | "warn" | "bad"
-      const r = document.getElementById("lamp-r");
-      const y = document.getElementById("lamp-y");
-      const g = document.getElementById("lamp-g");
-      r.classList.remove("on"); y.classList.remove("on"); g.classList.remove("on");
-      if(status==="bad") r.classList.add("on");
-      else if(status==="warn") y.classList.add("on");
-      else g.classList.add("on");
-    }
-
-    // Hauptbewertung
-    function score(u){
-      const h = host(u);
-      const bd = baseDomain(h);
-      const reasons = [];
-      let points = 0;
-
-      // 1) HTTPS
-      if (u.protocol !== "https:") { reasons.push("Kein HTTPS"); points += 40; }
-
-      // 2) Blacklist
-      if (BLACKLIST.includes(bd) || BLACKLIST.includes(h)) {
-        reasons.push("Bekannte Phishing-Domain");
-        points += 100;
+      // Blacklist prüfen
+      if (isBlacklisted(u.href)) {
+        res.lamp = "bad";
+        res.label = "Gefährlich (Blacklist)";
+        return res;
       }
 
-      // 3) Punycode
-      if (h.startsWith("xn--")) { reasons.push("Punycode-Domain"); points += 30; }
-
-      // 4) Verdächtige TLD
-      if (SUS_TLDS.includes(tld(h))) { reasons.push("Verdächtige TLD"); points += 20; }
-
-      // 5) Viele Zahlen
-      if (countDigits(h) >= 3) { reasons.push("Auffällig viele Zahlen in der Domain"); points += 15; }
-
-      // 6) Lange Domain
-      if (h.length > 25) { reasons.push("Sehr lange Domain"); points += 10; }
-
-      // 7) Lookalike-Muster (sehr simpel)
-      for (const pat of LOOKALIKE_PATTERNS) {
-        if (pat.test.test(h)) { reasons.push(`Sieht aus wie ${pat.brand} (Lookalike)`); points += 40; break; }
+      // Lookalike prüfen
+      for (let p of LOOKALIKE_PATTERNS) {
+        if (p.test.test(u.hostname)) {
+          res.lamp = "bad";
+          res.label = "Gefährlich (Lookalike: " + p.brand + ")";
+          return res;
+        }
       }
 
-      // Grenzen
-      if (points > 100) points = 100;
-
-      // Label / Ampel
-      let label = "OK", css = "ok", lamp = "ok";
-      if (points > 75) { label = "Gefährlich"; css = "bad"; lamp = "bad"; }
-      else if (points > 50) { label = "Riskant"; css = "warn"; lamp = "warn"; }
-      else if (points > 20) { label = "Vorsicht"; css = "warn"; lamp = "warn"; }
-
-      return { url: u.href, host: h, basedomain: bd, score: points, label, css, lamp, reasons };
+      return res;
     }
 
-    function renderResult(container, res){
+    // Ausgabe
+    function renderResult(container, res) {
       const div = document.createElement("div");
-      div.className = `result ${res.css}`;
-      div.innerHTML = `
-        <div><strong>${res.url}</strong></div>
-        <div>Status: ${res.label}</div>
-        ${res.reasons.length ? `<ul class="reasons">${res.reasons.map(r=>`<li>${r}</li>`).join("")}</ul>` : ""}
-      `;
+      div.className = "result " + res.lamp;
+      div.innerHTML = `<strong>${res.url}</strong><br>Status: ${res.label}`;
       container.appendChild(div);
     }
 
-    // --- UI Logik -------------------------------------------------------------
-    const inputOne = document.getElementById("single");
-    const btnOne   = document.getElementById("checkOne");
-    const areaList = document.getElementById("list");
-    const btnList  = document.getElementById("checkList");
-    const out      = document.getElementById("out");
- // Einzel-Button
-btnOne.onclick = () => {
-  out.innerHTML = '';
-  const d = normalizeUrl(singleInput.value);
-  if (!d) { 
-    alert('Bitte gib eine gültige URL ein.'); 
-    return; 
-  }
-
-  // ➡️ NEUER TEIL: Blacklist-Prüfung
-  if (isBlacklisted(d.href)) {
-    setTraffic("bad");   // 🚦 Ampel sofort auf Rot
-    out.innerHTML = `<div class="bad">${d.href}<br>Status: Gefährlich (Blacklist)</div>`;
-    return; // Prüfung hier stoppen
-  }
-
-  const res = score(d);
-  setTraffic(res.lamp);
-  renderResult(out, res);
-}; // Einzel-Button
-btnOne.onclick = () => {
-  out.innerHTML = '';
-  const d = normalizeUrl(singleInput.value);
-  if (!d) { alert('Bitte gib eine gültige URL ein.'); return; }
-
-  // ➡️ NEUER TEIL: Blacklist-Prüfung
-  if (isBlacklisted(d.href)) {
-    setTraffic("bad");   // 🚦 Ampel sofort auf Rot
-    out.innerHTML = `<div class="bad">${d.href}<br>Status: Gefährlich (Blacklist)</div>`;
-    return; // Prüfung hier stoppen
-  }
-
-  // wenn nicht auf Blacklist → normal weiter
-  const res = score(d);
-  res.url = d.href;
-  render(res);
-};
+    // Einzelprüfung
     btnOne.onclick = () => {
       out.innerHTML = "";
-      const u = normalizeUrl(inputOne.value);
-      if(!u){ alert("Bitte gib eine gültige URL ein."); return; }
-      const res = score(u);
+      const d = normalizeUrl(inputOne.value);
+      if (!d) { alert("Bitte gib eine gültige URL ein."); return; }
+      const res = score(d);
       setTraffic(res.lamp);
       renderResult(out, res);
     };
 
+    // Liste prüfen
     btnList.onclick = () => {
       out.innerHTML = "";
       const lines = areaList.value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
-      if(!lines.length){ alert("Bitte gib mindestens eine URL ein."); return; }
-      // Für die Liste zeigt die Ampel den „schlimmsten“ Status an
-      let worst = "ok"; // ok < warn < bad
-      lines.forEach(line=>{
+      if (!lines.length) { alert("Bitte gib mindestens eine URL ein."); return; }
+      let worst = "ok";
+      lines.forEach(line => {
         const u = normalizeUrl(line);
-        if(!u) return;
+        if (!u) return;
         const res = score(u);
         renderResult(out, res);
-        if(res.lamp==="bad") worst="bad";
-        else if(res.lamp==="warn" && worst!=="bad") worst="warn";
+        if (res.lamp==="bad") worst="bad";
+        else if (res.lamp==="warn" && worst!=="bad") worst="warn";
       });
       setTraffic(worst);
     };
 
     // Startzustand
     setTraffic("ok");
-  let blacklist = [];
-
-// Blacklist laden
-fetch('blacklist.json')
-  .then(res => res.json())
-  .then(data => {
-    blacklist = data.domains;
-    console.log("Blacklist geladen:", blacklist);
-  })
-  .catch(err => console.error("Fehler beim Laden der Blacklist:", err));
-
-// Prüfen ob Domain auf Blacklist ist
-function isBlacklisted(url) {
-  try {
-    const hostname = new URL(url).hostname.replace("www.", "");
-    return blacklist.some(domain => hostname.endsWith(domain));
-  } catch {
-    return false;
-  }
-}
-</script>
+  </script>
 </body>
 </html>
+    
+
+     
