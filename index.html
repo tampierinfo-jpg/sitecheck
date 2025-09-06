@@ -8,24 +8,15 @@
     body { font-family: Arial, sans-serif; background:#f4f4f9; padding:20px; }
     .wrap { max-width:600px; margin:0 auto; background:#fff; padding:20px; border-radius:10px; }
     h1 { text-align:center; }
-
-    input, textarea {
-      width:100%; padding:12px; margin:10px 0; border-radius:5px; border:1px solid #ccc;
-      font-size:20px; /* Eingabe größer */
-    }
-
-    button {
-      padding:12px 20px; margin:5px; cursor:pointer; font-size:18px;
-    }
-
-    .result { margin-top:15px; padding:10px; border-radius:5px; }
+    input, textarea { width:100%; padding:12px; margin:10px 0; border-radius:5px; border:1px solid #ccc; font-size:18px; }
+    button { padding:12px 20px; margin:5px; cursor:pointer; background:#007bff; color:white; border:none; border-radius:5px; font-size:18px; }
+    .result { margin-top:15px; padding:10px; border-radius:5px; font-size:18px; }
     .ok { background:#d4edda; color:#155724; }
     .warn { background:#fff3cd; color:#856404; }
     .bad { background:#f8d7da; color:#721c24; }
-
     /* Ampel */
     .traffic { display:flex; justify-content:center; margin:15px 0; }
-    .light { width:25px; height:25px; border-radius:50%; margin:0 6px; background:#ccc; }
+    .light { width:20px; height:20px; border-radius:50%; margin:0 5px; background:#ccc; }
     .red { background:red; }
     .yellow { background:orange; }
     .green { background:green; }
@@ -36,12 +27,12 @@
     <h1>🔒 SiteCheck – iPad</h1>
 
     <div class="traffic">
-      <div id="red" class="light"></div>
-      <div id="yellow" class="light"></div>
-      <div id="green" class="light"></div>
+      <div id="light-red" class="light"></div>
+      <div id="light-yellow" class="light"></div>
+      <div id="light-green" class="light"></div>
     </div>
 
-    <input id="single" placeholder="https://beispiel.de/login">
+    <input id="single" type="text" placeholder="https://beispiel.de/login">
     <button id="checkOne">Prüfen</button>
 
     <h3>Liste prüfen</h3>
@@ -52,91 +43,58 @@
   </div>
 
   <script>
-    // --- Hilfsfunktionen ---
-    function setTraffic(state) {
-      document.getElementById("red").style.background = (state==="bad") ? "red" : "#ccc";
-      document.getElementById("yellow").style.background = (state==="warn") ? "orange" : "#ccc";
-      document.getElementById("green").style.background = (state==="ok") ? "green" : "#ccc";
-    }
-
-    function normalizeUrl(input) {
-      if (!input) return null;
-      let s = input.trim();
-      if (!/^https?:\/\//i.test(s)) s = "https://" + s;
-      try { return new URL(s); } catch { return null; }
-    }
-
-    // --- Blacklist laden ---
     let blacklist = [];
-    fetch('blacklist.json', { cache: 'no-store' })
+
+    // Blacklist laden
+    fetch('blacklist.json')
       .then(res => res.json())
-      .then(data => {
-        blacklist = (data.domains || []).map(d => String(d).toLowerCase());
-        console.log("Blacklist geladen:", blacklist);
-      })
+      .then(data => { blacklist = data.domains; })
       .catch(err => console.error("Fehler beim Laden der Blacklist:", err));
 
+    // Ampel steuern
+    function setTraffic(status) {
+      document.getElementById("light-red").style.background = (status==="bad") ? "red" : "#ccc";
+      document.getElementById("light-yellow").style.background = (status==="warn") ? "orange" : "#ccc";
+      document.getElementById("light-green").style.background = (status==="ok") ? "green" : "#ccc";
+    }
+
+    // Blacklist-Prüfung (neu)
     function isBlacklisted(url) {
       try {
-        const host = new URL(url).hostname.replace(/^www\./, '').toLowerCase();
-        return blacklist.some(d => host === d || host.endsWith('.' + d));
-      } catch { return false; }
-    }
-
-    // --- Auswertung ---
-    function score(u) {
-      let res = { url: u.href, label:"Unauffällig", lamp:"ok", reasons:[] };
-      if (isBlacklisted(u.href)) {
-        res.label = "Gefährlich (Blacklist)";
-        res.lamp = "bad";
-        res.reasons.push("Domain auf Blacklist");
+        const hostname = new URL(url).hostname.replace(/^www\./, "");
+        return blacklist.includes(hostname);
+      } catch {
+        return false;
       }
-      return res;
     }
 
+    // Ergebnis anzeigen
     function renderResult(out, res) {
       const div = document.createElement("div");
-      div.className = "result " + (res.lamp==="bad" ? "bad" : res.lamp==="warn" ? "warn" : "ok");
+      div.className = res.lamp;
       div.innerHTML = `<strong>${res.url}</strong><br>Status: ${res.label}`;
       out.appendChild(div);
     }
 
-    // --- UI ---
+    // Einzel-Prüfen
     const inputOne = document.getElementById("single");
     const btnOne = document.getElementById("checkOne");
-    const areaList = document.getElementById("list");
-    const btnList = document.getElementById("checkList");
     const out = document.getElementById("out");
 
     btnOne.onclick = () => {
       out.innerHTML = "";
-      const d = normalizeUrl(inputOne.value);
-      if (!d) { alert("Bitte gib eine gültige URL ein."); return; }
-      const res = score(d);
-      setTraffic(res.lamp);
-      renderResult(out, res);
+      const url = inputOne.value.trim();
+      if (!url) { alert("Bitte gib eine gültige URL ein."); return; }
+
+      if (isBlacklisted(url)) {
+        setTraffic("bad");
+        out.innerHTML = `<div class="bad">${url}<br>Status: Gefährlich (Blacklist)</div>`;
+        return;
+      }
+
+      setTraffic("ok");
+      out.innerHTML = `<div class="ok">${url}<br>Status: Unauffällig</div>`;
     };
-
-    btnList.onclick = () => {
-      out.innerHTML = "";
-      const lines = areaList.value.split(/\n+/).map(s => s.trim()).filter(Boolean);
-      if (!lines.length) { alert("Bitte gib mindestens eine URL ein."); return; }
-
-      let worst = "ok";
-      lines.forEach(line => {
-        const d = normalizeUrl(line);
-        if (!d) return;
-        const res = score(d);
-        renderResult(out, res);
-        if (res.lamp==="bad") worst="bad";
-        else if (res.lamp==="warn" && worst!=="bad") worst="warn";
-      });
-      setTraffic(worst);
-    };
-
-    // Startzustand
-    setTraffic("ok");
   </script>
 </body>
 </html>
-    
