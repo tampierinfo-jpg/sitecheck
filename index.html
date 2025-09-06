@@ -41,16 +41,20 @@
   </div>
 
 <script>
-  // Blacklist direkt hier drin
+  // Offizielle Domains (erlaubt)
+  const SAFE_DOMAINS = [
+    "sparkasse.de"
+  ];
+
+  // Gefährliche/gefälschte Domains (Blacklist)
   const BLACKLIST = [
+    "sparkassse.de",
+    "sparkassse.com",
     "paypa1.com",
     "secure-paypal-login.com",
     "bank-login-verification.xyz",
-    "sparkasse-kundenservice.top",
     "amaz0n-support.net",
     "paypal-kundencenter.xyz",
-    "sparkassse.de",
-    "sparkassse.com",
     "amaz0n-konto.net",
     "dhl-paket-verfolgung.top"
   ];
@@ -70,10 +74,19 @@
     const u = normalizeUrl(url);
     if(!u) return {status:"ungültig", lamp:"yellow"};
     const hostname = u.hostname.toLowerCase();
-    if(BLACKLIST.some(bad => hostname.endsWith(bad))) {
+
+    // exakte Blacklist
+    if(BLACKLIST.includes(hostname)) {
       return {status:"Gefährlich (Blacklist)", lamp:"red"};
     }
-    return {status:"Unauffällig", lamp:"green"};
+
+    // nur exakte erlaubte Domains sind ok
+    if(SAFE_DOMAINS.includes(hostname)) {
+      return {status:"Unauffällig", lamp:"green"};
+    }
+
+    // alles andere -> Warnung
+    return {status:"Unbekannt – Vorsicht!", lamp:"yellow"};
   }
 
   function checkOne() {
