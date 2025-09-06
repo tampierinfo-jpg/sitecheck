@@ -1,0 +1,10 @@
+{
+  "version": "2025-09-06T12:00:00Z",
+  "domains": [
+    "paypa1.com",
+    "secure-paypal-login.com",
+    "bank-login-verification.xyz",
+    "sparkasse-kundenservice.top",
+    "amaz0n-support.net"
+  ]
+}
