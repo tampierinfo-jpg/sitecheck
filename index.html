@@ -1,58 +1,91 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SiteCheck – iPad</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SiteCheck – Ampel</title>
   <style>
-    body { font-family: Arial, sans-serif; background:#f4f4f9; padding:20px; }
-    .wrap { max-width:600px; margin:0 auto; background:#fff; padding:20px; border-radius:10px; }
-    h1 { text-align:center; }
-    input, textarea { width:100%; padding:10px; margin:10px 0; border-radius:5px; border:1px solid #ccc; font-size:18px; }
-    button { padding:10px 20px; margin:5px; cursor:pointer; border:none; border-radius:5px; font-size:18px; background:#007bff; color:#fff; }
-    .result { margin-top:15px; padding:10px; border-radius:5px; font-size:18px; }
-    .ok { background:#d4edda; color:#155724; }
-    .warn { background:#fff3cd; color:#856404; }
-    .bad { background:#f8d7da; color:#721c24; }
-    /* Ampel links oben */
-    .traffic { display:flex; justify-content:flex-start; margin:0 0 20px 0; }
-    .light { width:20px; height:20px; border-radius:50%; margin-right:5px; background:#ccc; }
-    .red { background:red; }
-    .yellow { background:orange; }
-    .green { background:green; }
+    :root{
+      --bg:#f4f4f9; --card:#fff; --ink:#222; --muted:#6b7280;
+      --ok:#16a34a; --warn:#f59e0b; --bad:#dc2626;
+      --ring:#e5e7eb;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+      background:var(--bg); color:var(--ink);
+      display:flex; min-height:100svh; align-items:center; justify-content:center; padding:16px;
+    }
+    .wrap{
+      width:100%; max-width:760px; background:var(--card); border-radius:20px;
+      padding:24px; box-shadow:0 8px 40px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.06);
+    }
+    h1{margin:0 0 8px; text-align:center}
+    p.lead{margin:0 0 20px; text-align:center; color:var(--muted)}
+
+    /* Ampel */
+    .traffic{display:flex; justify-content:center; gap:10px; margin:8px 0 18px}
+    .dot{
+      width:22px; height:22px; border-radius:50%;
+      background:#d1d5db; border:3px solid var(--ring);
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,.45);
+    }
+    .dot.red{background:var(--bad)}
+    .dot.yellow{background:var(--warn)}
+    .dot.green{background:var(--ok)}
+
+    .row{display:flex; gap:10px; flex-wrap:wrap}
+    input[type="text"]{
+      flex:1 1 380px; padding:14px 16px; border-radius:12px; border:1.5px solid #d1d5db;
+      outline:none; font-size:16px;
+    }
+    input[type="text"]:focus{border-color:#60a5fa; box-shadow:0 0 0 4px rgba(59,130,246,.15)}
+    button{
+      padding:14px 18px; border:0; border-radius:12px; cursor:pointer;
+      background:#2563eb; color:#fff; font-weight:600; font-size:16px;
+    }
+    button:hover{filter:brightness(.96)}
+    .result{
+      margin-top:16px; border-radius:12px; padding:14px 16px; font-weight:600;
+    }
+    .ok{background:#dcfce7; color:#065f46}
+    .warn{background:#fef3c7; color:#92400e}
+    .bad{background:#fee2e2; color:#7f1d1d}
+    .small{font-weight:500; color:var(--muted)}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+    .hint{margin-top:6px; color:var(--muted); font-size:14px}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>🔒 SiteCheck – iPad</h1>
+    <h1>SiteCheck – Ampel</h1>
+    <div class="traffic" aria-label="Ampelstatus">
+      <div id="t-red" class="dot"></div>
+      <div id="t-yellow" class="dot"></div>
+      <div id="t-green" class="dot"></div>
+    </div>
+    <p class="lead">Gib eine URL ein (z. B. <span class="mono">https://sparkasse.de</span>) und klicke auf „Prüfen“.</p>
 
-    <div class="traffic">
-      <div id="red" class="light"></div>
-      <div id="yellow" class="light"></div>
-      <div id="green" class="light"></div>
+    <div class="row">
+      <input id="inp" type="text" placeholder="https://beispiel.de/login" autocomplete="off" />
+      <button id="btn">Prüfen</button>
     </div>
 
-    <input id="url" type="text" placeholder="https://beispiel.de/login">
-    <button onclick="checkUrl()">Prüfen</button>
-
-    <h3>Liste prüfen</h3>
-    <textarea id="list" placeholder="Eine URL pro Zeile"></textarea>
-    <button onclick="checkList()">Liste prüfen</button>
-
-    <div id="out"></div>
+    <div id="out" class="hint">Hinweis: Diese Prüfung passiert lokal im Browser (ohne Server/Cloud).</div>
   </div>
 
   <script>
-    // Offizielle Domains (erlaubt)
+    // --------- Daten ---------
     const SAFE_DOMAINS = [
-      "sparkasse.de"
+      "sparkasse.de",
+      "paypal.com",
+      "dhl.de",
+      "amazon.de"
     ];
 
-    // Gefährliche Domains (Blacklist)
     const BLACKLIST = [
-      "sparkassse.de",
-      "sparkassse.com",
-      "paypa1.com",
+      "sparkassse.de",      // extra s
+      "paypa1.com",        // 1 statt l
       "secure-paypal-login.com",
       "bank-login-verification.xyz",
       "amaz0n-support.net",
@@ -61,65 +94,141 @@
       "dhl-paket-verfolgung.top"
     ];
 
-    function setTraffic(color) {
-      document.getElementById("red").style.background = (color==="red" ? "red" : "#ccc");
-      document.getElementById("yellow").style.background = (color==="yellow" ? "orange" : "#ccc");
-      document.getElementById("green").style.background = (color==="green" ? "green" : "#ccc");
+    // Für Lookalike-Erkennung (Markenwörter)
+    const BRANDS = ["sparkasse","paypal","dhl","amazon"];
+
+    // --------- Hilfen ---------
+    function normalizeUrl(raw) {
+      try {
+        const u = raw.trim();
+        const url = new URL(u.startsWith("http") ? u : "https://" + u);
+        return url;
+      } catch { return null; }
     }
 
-    function normalizeUrl(url) {
-      try { return new URL(url.startsWith("http")? url : "https://"+url); }
-      catch { return null; }
+    function registrableHostname(hostname) {
+      // sehr einfache Heuristik: letzte zwei Labels
+      const parts = hostname.split(".").filter(Boolean);
+      if (parts.length >= 2) return parts.slice(-2).join(".");
+      return hostname;
     }
 
-    function checkDomain(url) {
-      const u = normalizeUrl(url);
-      if(!u) return {status:"ungültig", lamp:"yellow"};
-      const hostname = u.hostname.toLowerCase();
-
-      // Exakte Blacklist
-      if(BLACKLIST.includes(hostname)) {
-        return {status:"Gefährlich (Blacklist)", lamp:"red"};
+    // Levenshtein-Distanz (für Tippfehler wie sparkassse vs sparkasse)
+    function lev(a,b){
+      const m = a.length, n = b.length;
+      const dp = Array.from({length:m+1},()=>Array(n+1).fill(0));
+      for(let i=0;i<=m;i++) dp[i][0]=i;
+      for(let j=0;j<=n;j++) dp[0][j]=j;
+      for(let i=1;i<=m;i++){
+        for(let j=1;j<=n;j++){
+          const cost = a[i-1]===b[j-1]?0:1;
+          dp[i][j] = Math.min(
+            dp[i-1][j]+1,
+            dp[i][j-1]+1,
+            dp[i-1][j-1]+cost
+          );
+        }
       }
-      // Exakte Safelist
-      if(SAFE_DOMAINS.includes(hostname)) {
-        return {status:"Unauffällig", lamp:"green"};
+      return dp[m][n];
+    }
+
+    function looksLikeBrand(host){
+      const h = host.toLowerCase();
+      for(const brand of BRANDS){
+        // Direktes Enthalten (Subdomain) OK: z.B. sparkasse.de
+        if (h.includes(brand)) {
+          // wenn es NICHT exakt der Safelist-Treffer ist, sondern nur "so ähnlich"
+          const base = registrableHostname(h);
+          const exactSafe = SAFE_DOMAINS.some(s => base === s);
+          if (!exactSafe) return {match:brand, reason:"Lookalike-Name"};
+        }
+        // kleine Tippfehler (1 Edit)
+        if (lev(h.replace(/\./g,''), brand) <= 1) {
+          return {match:brand, reason:"Tippfehler im Namen"};
+        }
       }
-      // Default
-      return {status:"Unbekannt", lamp:"yellow"};
+      return null;
     }
 
-    function renderResult(out, res, url) {
-      const div = document.createElement("div");
-      div.className = "result " + (res.lamp==="red"?"bad":res.lamp==="yellow"?"warn":"ok");
-      div.textContent = url + " → Status: " + res.status;
-      out.appendChild(div);
+    // --------- Bewertung ---------
+    function score(input){
+      const url = normalizeUrl(input);
+      if (!url) return {lamp:"yellow", title:"Ungültige URL", msg:"Bitte gib eine gültige URL ein (mit oder ohne https://)."};
+
+      const proto = url.protocol.replace(":","");
+      const host = url.hostname.toLowerCase();
+      const base = registrableHostname(host);
+
+      // 1) Blacklist?
+      if (BLACKLIST.includes(base) || BLACKLIST.includes(host)) {
+        return {lamp:"red", title:"Gefährlich (Blacklist)", msg:`${base} steht auf der Sperrliste.`};
+      }
+
+      // 2) Safelist (exakt)?
+      if (SAFE_DOMAINS.includes(base)) {
+        // http statt https -> Warnung
+        if (proto==="http") {
+          return {lamp:"yellow", title:"Nur HTTP", msg:"Die Verbindung ist nicht verschlüsselt (HTTP). Nutze HTTPS, wenn möglich."};
+        }
+        return {lamp:"green", title:"Unauffällig (Safelist)", msg:`${base} ist als vertrauenswürdig hinterlegt.`};
+      }
+
+      // 3) Lookalike / Tippfehler?
+      const like = looksLikeBrand(base);
+      if (like) {
+        return {lamp:"red", title:"Gefährlich (Lookalike)", msg:`Sieht aus wie „${like.match}“ (${like.reason}) – besser nicht nutzen.`};
+      }
+
+      // 4) Nur HTTP?
+      if (proto==="http") {
+        return {lamp:"yellow", title:"Nur HTTP", msg:"Die Verbindung ist nicht verschlüsselt (HTTP). Vorsicht bei Eingaben."};
+      }
+
+      // 5) Standard
+      return {lamp:"green", title:"Unauffällig", msg:`Keine Auffälligkeiten für ${base} gefunden.`};
     }
 
-    function checkUrl() {
-      const out = document.getElementById("out");
-      out.innerHTML = "";
-      const url = document.getElementById("url").value.trim();
-      if(!url) return alert("Bitte eine URL eingeben!");
-      const res = checkDomain(url);
-      renderResult(out, res, url);
-      setTraffic(res.lamp);
+    // --------- UI ---------
+    const inp  = document.getElementById("inp");
+    const btn  = document.getElementById("btn");
+    const out  = document.getElementById("out");
+    const rDot = document.getElementById("t-red");
+    const yDot = document.getElementById("t-yellow");
+    const gDot = document.getElementById("t-green");
+
+    function setLamp(color){
+      rDot.classList.remove("red"); yDot.classList.remove("yellow"); gDot.classList.remove("green");
+      if (color==="red") rDot.classList.add("red");
+      if (color==="yellow") yDot.classList.add("yellow");
+      if (color==="green") gDot.classList.add("green");
     }
 
-    function checkList() {
-      const out = document.getElementById("out");
-      out.innerHTML = "";
-      const lines = document.getElementById("list").value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
-      if(!lines.length) return alert("Bitte gib mindestens eine URL ein.");
-      let worst = "green";
-      lines.forEach(line=>{
-        const res = checkDomain(line);
-        renderResult(out, res, line);
-        if(res.lamp==="red") worst="red";
-        else if(res.lamp==="yellow" && worst!=="red") worst="yellow";
-      });
-      setTraffic(worst);
+    function render(res, raw){
+      setLamp(res.lamp);
+      const cls = res.lamp==="red" ? "bad" : res.lamp==="yellow" ? "warn" : "ok";
+      out.className = `result ${cls}`;
+      const show = normalizeUrl(raw);
+      const pretty = show ? registrableHostname(show.hostname) : raw;
+      out.innerHTML = `<div>${res.title}</div><div class="small">${res.msg}</div><div class="hint mono">${pretty}</div>`;
     }
+
+    function run(){
+      const val = inp.value.trim();
+      if(!val){
+        setLamp("yellow");
+        out.className = "result warn";
+        out.innerHTML = `<div>Keine Eingabe</div><div class="small">Bitte gib eine URL ein.</div>`;
+        return;
+      }
+      const res = score(val);
+      render(res, val);
+    }
+
+    btn.addEventListener("click", run);
+    inp.addEventListener("keydown", e => { if(e.key==="Enter") run(); });
+
+    // Demo-Vorbefüllung beim ersten Laden (optional)
+    if (!location.search) inp.value = "sparkassse.de";
   </script>
 </body>
 </html>
