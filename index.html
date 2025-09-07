@@ -5,83 +5,41 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SiteCheck – iPad</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f9;
-      padding: 20px;
-    }
-    .wrap {
-      max-width: 600px;
-      margin: 100px auto 0 auto;
-      background: #fff;
-      padding: 20px;
-      border-radius: 10px;
-    }
-    h1 {
-      text-align: center;
-    }
-    input, textarea {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      font-size: 18px;
-    }
-    button {
-      padding: 10px 20px;
-      margin: 5px;
-      cursor: pointer;
-      border: none;
-      border-radius: 5px;
-      background: #007BFF;
-      color: white;
-      font-size: 16px;
-    }
-    .result {
-      margin-top: 15px;
-      padding: 10px;
-      border-radius: 5px;
-      font-size: 18px;
-    }
-    .ok { background: #d4edda; color: #155724; }
-    .warn { background: #fff3cd; color: #856404; }
-    .bad { background: #f8d7da; color: #721c24; }
+    body { font-family: Arial, sans-serif; background:#f4f4f9; padding:20px; }
+    .wrap { max-width:600px; margin:0 auto; background:#fff; padding:20px; border-radius:10px; }
+    h1 { text-align:center; }
+    input, textarea { width:100%; padding:10px; margin:10px 0; border-radius:5px; border:1px solid #ccc; font-size:18px; }
+    button { padding:10px 20px; margin:5px; cursor:pointer; font-size:18px; border-radius:5px; background:#007bff; color:#fff; border:none; }
+    button:hover { background:#0056b3; }
+    .result { margin-top:15px; padding:10px; border-radius:5px; font-size:18px; }
+    .ok { background:#d4edda; color:#155724; }
+    .warn { background:#fff3cd; color:#856404; }
+    .bad { background:#f8d7da; color:#721c24; }
 
-    /* 🚦 Ampel rechts oben */
-    .traffic {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      display: flex;
-      gap: 5px;
-      z-index: 9999;
-    }
-    .light {
-      width: 25px;
-      height: 25px;
-      border-radius: 50%;
-      background: #ccc;
-    }
-    .red { background: red; }
-    .yellow { background: orange; }
-    .green { background: green; }
+    /* Ampel */
+    .traffic { display:flex; justify-content:center; margin:15px 0; }
+    .light { width:20px; height:20px; border-radius:50%; margin:0 5px; background:#ccc; }
+    .red { background:red; }
+    .yellow { background:orange; }
+    .green { background:green; }
   </style>
 </head>
 <body>
-  <!-- Ampel 🚦 -->
-  <div class="traffic">
-    <div id="red" class="light"></div>
-    <div id="yellow" class="light"></div>
-    <div id="green" class="light"></div>
-  </div>
-
   <div class="wrap">
     <h1>🔒 SiteCheck – iPad</h1>
 
-    <input id="singleInput" placeholder="https://beispiel.de/login">
-    <button id="checkOneBtn" onclick="checkOne()">Prüfen</button>
+    <!-- Ampel -->
+    <div class="traffic">
+      <div id="red" class="light"></div>
+      <div id="yellow" class="light"></div>
+      <div id="green" class="light"></div>
+    </div>
 
+    <!-- Einzelprüfung -->
+    <input id="single" placeholder="https://beispiel.de/login">
+    <button id="checkOne" onclick="checkOne()">Prüfen</button>
+
+    <!-- Liste prüfen -->
     <h3>Liste prüfen</h3>
     <textarea id="list" placeholder="Eine URL pro Zeile"></textarea>
     <button onclick="checkList()">Liste prüfen</button>
@@ -90,102 +48,101 @@
   </div>
 
   <script>
+    // Offizielle Domains (erlaubt)
     const SAFE_DOMAINS = [
       "sparkasse.de"
     ];
 
+    // Gefährliche Domains (Blacklist)
     const BLACKLIST = [
       "sparkassse.de",
       "sparkassse.com",
       "paypa1.com",
       "secure-paypal-login.com",
       "bank-login-verification.xyz",
+      "sparkasse-kundenservice.top",
       "amaz0n-support.net",
       "paypal-kundencenter.xyz",
       "amaz0n-konto.net",
       "dhl-paket-verfolgung.top"
     ];
 
+    // Ampel steuern
     function setTraffic(color) {
-      document.getElementById("red").style.background = (color==="red" ? "red" : "#ccc");
-      document.getElementById("yellow").style.background = (color==="yellow" ? "orange" : "#ccc");
-      document.getElementById("green").style.background = (color==="green" ? "green" : "#ccc");
+      document.getElementById("red").style.background = (color==="red"?"red":"#ccc");
+      document.getElementById("yellow").style.background = (color==="yellow"?"orange":"#ccc");
+      document.getElementById("green").style.background = (color==="green"?"green":"#ccc");
     }
 
+    // URL normalisieren
     function normalizeUrl(url) {
-      try { return new URL(url.startsWith("http") ? url : "https://" + url); }
-      catch { return null; }
+      try {
+        return new URL(url.startsWith("http") ? url : "https://" + url);
+      } catch { return null; }
     }
 
-    function checkDomain(hostname) {
-      const h = hostname.toLowerCase();
-      if (BLACKLIST.includes(h)) {
-        return { status: "Gefährlich (Blacklist)", lamp: "red" };
-      }
-      if (SAFE_DOMAINS.includes(h)) {
-        return { status: "Offiziell", lamp: "green" };
-      }
-      return { status: "Unauffällig", lamp: "green" };
+    // Domain-Check
+    function checkDomain(url) {
+      const u = normalizeUrl(url);
+      if(!u) return {status:"Ungültig", lamp:"yellow"};
+      const host = u.hostname.toLowerCase();
+
+      if (SAFE_DOMAINS.includes(host)) return {status:"Unauffällig", lamp:"green"};
+      if (BLACKLIST.includes(host)) return {status:"Gefährlich (Blacklist)", lamp:"red"};
+
+      // Lookalike-Test (einfach)
+      if (host.includes("sparkassse")) return {status:"Gefährlich (Lookalike: sparkasse)", lamp:"red"};
+
+      return {status:"Unauffällig", lamp:"green"};
     }
 
+    // Ergebnis anzeigen
+    function renderResult(out, url, res) {
+      const div = document.createElement("div");
+      div.className = "result " + (res.lamp==="red"?"bad":res.lamp==="yellow"?"warn":"ok");
+      div.innerHTML = `<b>${url}</b><br>Status: ${res.status}`;
+      out.appendChild(div);
+    }
+
+    // Einzelprüfung
     function checkOne() {
-      const input = document.getElementById("singleInput").value;
+      const url = document.getElementById("single").value.trim();
       const out = document.getElementById("out");
       out.innerHTML = "";
-
-      const u = normalizeUrl(input);
-      if (!u) {
-        alert("Bitte gib eine gültige URL ein.");
-        return;
-      }
-
-      const res = checkDomain(u.hostname);
+      const res = checkDomain(url);
+      renderResult(out, url, res);
       setTraffic(res.lamp);
-      out.innerHTML = `<div class="result ${res.lamp}">${input}<br>Status: ${res.status}</div>`;
     }
 
+    // Liste prüfen
     function checkList() {
-      const lines = document.getElementById("list").value.split(/\n+/).map(s => s.trim()).filter(Boolean);
+      const lines = document.getElementById("list").value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
       const out = document.getElementById("out");
       out.innerHTML = "";
-
-      if (!lines.length) {
-        alert("Bitte gib mindestens eine URL ein.");
-        return;
-      }
-
       let worst = "green";
-      lines.forEach(line => {
-        const u = normalizeUrl(line);
-        if (!u) return;
-        const res = checkDomain(u.hostname);
-        const div = document.createElement("div");
-        div.className = "result " + res.lamp;
-        div.innerHTML = `${line}<br>Status: ${res.status}`;
-        out.appendChild(div);
 
-        if (res.lamp === "red") worst = "red";
-        else if (res.lamp === "yellow" && worst !== "red") worst = "yellow";
+      lines.forEach(line => {
+        const res = checkDomain(line);
+        renderResult(out, line, res);
+        if (res.lamp==="red") worst="red";
+        else if (res.lamp==="yellow" && worst!=="red") worst="yellow";
       });
 
       setTraffic(worst);
     }
 
-    // ✅ Auto-Check aus URL-Parameter (?u=...)
-    (function autoFromQuery(){
-      const p = new URLSearchParams(location.search);
-      const u = p.get('u');
-      if (!u) return;
-      const inp = document.getElementById('singleInput');
-      if (inp) {
-        inp.value = u;
-        const btn = document.getElementById('checkOneBtn');
+    // Auto-Prüfung über ?u=
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(location.search);
+      const preset = params.get('u');
+      if (preset) {
+        const input = document.getElementById('single');
+        if (input) input.value = preset;
+
+        const btn = document.getElementById('checkOne');
         if (btn) btn.click();
       }
-    })();
-
-    // Startzustand
-    setTraffic("green");
+    });
   </script>
 </body>
 </html>
