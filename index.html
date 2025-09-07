@@ -1,234 +1,211 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SiteCheck – Ampel</title>
-  <style>
-    :root{
-      --bg:#f4f4f9; --card:#fff; --ink:#222; --muted:#6b7280;
-      --ok:#16a34a; --warn:#f59e0b; --bad:#dc2626;
-      --ring:#e5e7eb;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
-      background:var(--bg); color:var(--ink);
-      display:flex; min-height:100svh; align-items:center; justify-content:center; padding:16px;
-    }
-    .wrap{
-      width:100%; max-width:760px; background:var(--card); border-radius:20px;
-      padding:24px; box-shadow:0 8px 40px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.06);
-    }
-    h1{margin:0 0 8px; text-align:center}
-    p.lead{margin:0 0 20px; text-align:center; color:var(--muted)}
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SiteCheck – Ampel</title>
+<style>
+  :root{
+    --bg:#f4f4f9;
+    --card:#fff;
+    --text:#23262a;
+    --muted:#667085;
+    --ok:#16a34a;
+    --warn:#f59e0b;
+    --bad:#dc2626;
+    --soft:#e5e7eb;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+    background:var(--bg); color:var(--text); line-height:1.45;
+  }
+  .wrap{
+    max-width: 720px; margin: 48px auto; background:var(--card);
+    padding: 24px; border-radius: 16px; box-shadow:0 10px 30px rgba(0,0,0,.06);
+  }
+  h1{margin:0 0 10px; font-size: clamp(22px, 4vw, 34px); text-align:center;}
+  .lead{margin:0 0 18px; color:var(--muted); text-align:center; font-size:clamp(14px,2.6vw,18px)}
 
-    /* Ampel */
-    .traffic{display:flex; justify-content:center; gap:10px; margin:8px 0 18px}
-    .dot{
-      width:22px; height:22px; border-radius:50%;
-      background:#d1d5db; border:3px solid var(--ring);
-      box-shadow: inset 0 0 0 2px rgba(255,255,255,.45);
-    }
-    .dot.red{background:var(--bad)}
-    .dot.yellow{background:var(--warn)}
-    .dot.green{background:var(--ok)}
+  .row{display:flex; gap:10px; margin:10px 0}
+  input, textarea{
+    width:100%; font-size:18px; padding:14px 16px; border-radius:12px;
+    border:1px solid var(--soft); outline:none;
+  }
+  input::placeholder, textarea::placeholder{color:#9aa3af}
+  button{
+    white-space:nowrap; padding:14px 18px; border:none; border-radius:12px;
+    background:#2563eb; color:#fff; font-size:18px; cursor:pointer;
+  }
+  button:hover{filter:brightness(.96)}
+  .result{
+    margin-top:16px; padding:14px; border-radius:12px; font-size:16px;
+  }
+  .ok   { background:#dcfce7; color:#14532d; }
+  .warn { background:#fef9c3; color:#7a5600; }
+  .bad  { background:#fee2e2; color:#7f1d1d; }
 
-    .row{display:flex; gap:10px; flex-wrap:wrap}
-    input[type="text"]{
-      flex:1 1 380px; padding:14px 16px; border-radius:12px; border:1.5px solid #d1d5db;
-      outline:none; font-size:16px;
-    }
-    input[type="text"]:focus{border-color:#60a5fa; box-shadow:0 0 0 4px rgba(59,130,246,.15)}
-    button{
-      padding:14px 18px; border:0; border-radius:12px; cursor:pointer;
-      background:#2563eb; color:#fff; font-weight:600; font-size:16px;
-    }
-    button:hover{filter:brightness(.96)}
-    .result{
-      margin-top:16px; border-radius:12px; padding:14px 16px; font-weight:600;
-    }
-    .ok{background:#dcfce7; color:#065f46}
-    .warn{background:#fef3c7; color:#92400e}
-    .bad{background:#fee2e2; color:#7f1d1d}
-    .small{font-weight:500; color:var(--muted)}
-    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
-    .hint{margin-top:6px; color:var(--muted); font-size:14px}
-  </style>
+  /* Die fest angepinnte Ampel (oben links) */
+  .badge{
+    position:fixed; top:12px; left:12px; z-index:9999;
+    display:flex; gap:8px; align-items:center; padding:8px 10px;
+    background:rgba(255,255,255,.9); backdrop-filter: blur(6px);
+    border:1px solid var(--soft); border-radius:999px; box-shadow:0 6px 18px rgba(0,0,0,.08);
+  }
+  .dot{
+    width:14px; height:14px; border-radius:50%; background:#d1d5db; /* grau = inaktiv */
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+  }
+  .dot.red.active    { background:var(--bad) }
+  .dot.yellow.active { background:var(--warn) }
+  .dot.green.active  { background:var(--ok)  }
+  .badge label{
+    font-size:13px; color:#475569; user-select:none; display:none;
+  }
+  /* auf großen Bildschirmen Label zeigen */
+  @media (min-width:600px){ .badge label{display:inline} }
+
+  .hint{margin:4px 0 0; font-size:13px; color:#6b7280; text-align:center}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>SiteCheck – Ampel</h1>
-    <div class="traffic" aria-label="Ampelstatus">
-      <div id="t-red" class="dot"></div>
-      <div id="t-yellow" class="dot"></div>
-      <div id="t-green" class="dot"></div>
-    </div>
-    <p class="lead">Gib eine URL ein (z. B. <span class="mono">https://sparkasse.de</span>) und klicke auf „Prüfen“.</p>
 
-    <div class="row">
-      <input id="inp" type="text" placeholder="https://beispiel.de/login" autocomplete="off" />
-      <button id="btn">Prüfen</button>
-    </div>
+<!-- feste Mini-Ampel oben links -->
+<div class="badge" id="badge" title="Status der letzten Prüfung. Tippen, um zum Eingabefeld zu springen.">
+  <div class="dot red"   id="b-red"></div>
+  <div class="dot yellow" id="b-yellow"></div>
+  <div class="dot green"  id="b-green"></div>
+  <label id="badgeLabel">–</label>
+</div>
 
-    <div id="out" class="hint">Hinweis: Diese Prüfung passiert lokal im Browser (ohne Server/Cloud).</div>
+<div class="wrap">
+  <h1>SiteCheck – Ampel</h1>
+  <p class="lead">Gib eine URL ein (z. B. <code>https://sparkasse.de</code>) und klicke auf „Prüfen“.</p>
+
+  <div class="row">
+    <input id="single" placeholder="https://beispiel.de/login" inputmode="url" />
+    <button id="btn">Prüfen</button>
   </div>
 
-  <script>
-    // --------- Daten ---------
-    const SAFE_DOMAINS = [
-      "sparkasse.de",
-      "paypal.com",
-      "dhl.de",
-      "amazon.de"
-    ];
+  <div id="out" class="result ok" style="display:none"></div>
+  <p class="hint">Tipp: Du kannst diese Seite auch mit <code>?u=https://…</code> aufrufen. Die Ampel prüft sofort.</p>
+</div>
 
-    const BLACKLIST = [
-      "sparkassse.de",      // extra s
-      "paypa1.com",        // 1 statt l
-      "secure-paypal-login.com",
-      "bank-login-verification.xyz",
-      "amaz0n-support.net",
-      "paypal-kundencenter.xyz",
-      "amaz0n-konto.net",
-      "dhl-paket-verfolgung.top"
-    ];
+<script>
+/* ---------- Daten ---------- */
+const SAFE = [
+  "sparkasse.de"  // echte Domain
+];
+const BLACKLIST = [
+  "sparkassse.de", "sparkasssse.de", "sparkassse.com",
+  "paypa1.com", "secure-paypal-login.com", "bank-login-verification.xyz",
+  "amaz0n-support.net", "amaz0n-konto.net", "paypal-kundencenter.xyz",
+  "dhl-paket-verfolgung.top"
+];
 
-    // Für Lookalike-Erkennung (Markenwörter)
-    const BRANDS = ["sparkasse","paypal","dhl","amazon"];
+/* ---------- Helpers ---------- */
+function setBadge(status, labelText){
+  const map = { bad:"b-red", warn:"b-yellow", ok:"b-green" };
+  ["b-red","b-yellow","b-green"].forEach(id=>document.getElementById(id).classList.remove("active"));
+  document.getElementById(map[status]).classList.add("active");
+  const label = document.getElementById("badgeLabel");
+  label.textContent = labelText || (status==="ok" ? "Unauffällig" : status==="warn" ? "Vorsicht" : "Gefährlich");
+}
 
-    // --------- Hilfen ---------
-    function normalizeUrl(raw) {
-      try {
-        const u = raw.trim();
-        const url = new URL(u.startsWith("http") ? u : "https://" + u);
-        return url;
-      } catch { return null; }
+function normalizeUrl(raw){
+  if(!raw) return null;
+  let s = raw.trim();
+  if(!/^https?:\/\//i.test(s)) s = "https://" + s;
+  try{ return new URL(s); }catch{ return null; }
+}
+
+function endsWithHost(host, candidate){
+  // exakt oder Subdomain von candidate
+  return host === candidate || host.endsWith("."+candidate);
+}
+
+function levenshtein(a,b){
+  // kleine Distanz für Lookalikes (ohne externe Lib)
+  if(a===b) return 0;
+  const m=a.length, n=b.length;
+  const dp = Array.from({length:m+1}, ()=>Array(n+1).fill(0));
+  for(let i=0;i<=m;i++) dp[i][0]=i;
+  for(let j=0;j<=n;j++) dp[0][j]=j;
+  for(let i=1;i<=m;i++){
+    for(let j=1;j<=n;j++){
+      const c = a[i-1]===b[j-1]?0:1;
+      dp[i][j] = Math.min(dp[i-1][j]+1, dp[i][j-1]+1, dp[i-1][j-1]+c);
     }
+  }
+  return dp[m][n];
+}
 
-    function registrableHostname(hostname) {
-      // sehr einfache Heuristik: letzte zwei Labels
-      const parts = hostname.split(".").filter(Boolean);
-      if (parts.length >= 2) return parts.slice(-2).join(".");
-      return hostname;
-    }
+/* ---------- Bewertung ---------- */
+function score(u){
+  const url = normalizeUrl(u);
+  if(!url) return { lamp:"warn", msg:"Ungültige URL", detail:String(u) };
 
-    // Levenshtein-Distanz (für Tippfehler wie sparkassse vs sparkasse)
-    function lev(a,b){
-      const m = a.length, n = b.length;
-      const dp = Array.from({length:m+1},()=>Array(n+1).fill(0));
-      for(let i=0;i<=m;i++) dp[i][0]=i;
-      for(let j=0;j<=n;j++) dp[0][j]=j;
-      for(let i=1;i<=m;i++){
-        for(let j=1;j<=n;j++){
-          const cost = a[i-1]===b[j-1]?0:1;
-          dp[i][j] = Math.min(
-            dp[i-1][j]+1,
-            dp[i][j-1]+1,
-            dp[i-1][j-1]+cost
-          );
-        }
-      }
-      return dp[m][n];
-    }
+  const host = url.hostname.toLowerCase();
 
-    function looksLikeBrand(host){
-      const h = host.toLowerCase();
-      for(const brand of BRANDS){
-        // Direktes Enthalten (Subdomain) OK: z.B. sparkasse.de
-        if (h.includes(brand)) {
-          // wenn es NICHT exakt der Safelist-Treffer ist, sondern nur "so ähnlich"
-          const base = registrableHostname(h);
-          const exactSafe = SAFE_DOMAINS.some(s => base === s);
-          if (!exactSafe) return {match:brand, reason:"Lookalike-Name"};
-        }
-        // kleine Tippfehler (1 Edit)
-        if (lev(h.replace(/\./g,''), brand) <= 1) {
-          return {match:brand, reason:"Tippfehler im Namen"};
-        }
-      }
-      return null;
-    }
+  // 1) Blacklist hart
+  if(BLACKLIST.some(b=>endsWithHost(host, b)))
+    return { lamp:"bad", msg:"Gefährlich (Blacklist)", detail:host };
 
-    // --------- Bewertung ---------
-    function score(input){
-      const url = normalizeUrl(input);
-      if (!url) return {lamp:"yellow", title:"Ungültige URL", msg:"Bitte gib eine gültige URL ein (mit oder ohne https://)."};
+  // 2) Safelist priorisieren
+  if(SAFE.some(s=>endsWithHost(host, s)))
+    return { lamp:"ok", msg:"Unauffällig (bekannte Domain)", detail:host };
 
-      const proto = url.protocol.replace(":","");
-      const host = url.hostname.toLowerCase();
-      const base = registrableHostname(host);
+  // 3) Lookalike-Check zu wichtigen Marken
+  const important = ["sparkasse.de","paypal.com","amazon.de","dhl.de","icloud.com"];
+  for(const base of important){
+    const d = levenshtein(host, base);
+    if(d>0 && d<=2) return { lamp:"bad", msg:"Gefährlich (Lookalike: "+base+")", detail:host };
+  }
 
-      // 1) Blacklist?
-      if (BLACKLIST.includes(base) || BLACKLIST.includes(host)) {
-        return {lamp:"red", title:"Gefährlich (Blacklist)", msg:`${base} steht auf der Sperrliste.`};
-      }
+  // 4) HTTP ohne TLS
+  if(url.protocol==="http:")
+    return { lamp:"warn", msg:"Vorsicht (ohne HTTPS)", detail:url.href };
 
-      // 2) Safelist (exakt)?
-      if (SAFE_DOMAINS.includes(base)) {
-        // http statt https -> Warnung
-        if (proto==="http") {
-          return {lamp:"yellow", title:"Nur HTTP", msg:"Die Verbindung ist nicht verschlüsselt (HTTP). Nutze HTTPS, wenn möglich."};
-        }
-        return {lamp:"green", title:"Unauffällig (Safelist)", msg:`${base} ist als vertrauenswürdig hinterlegt.`};
-      }
+  // 5) Neutral
+  return { lamp:"ok", msg:"Unauffällig", detail:host };
+}
 
-      // 3) Lookalike / Tippfehler?
-      const like = looksLikeBrand(base);
-      if (like) {
-        return {lamp:"red", title:"Gefährlich (Lookalike)", msg:`Sieht aus wie „${like.match}“ (${like.reason}) – besser nicht nutzen.`};
-      }
+/* ---------- UI ---------- */
+const inp  = document.getElementById("single");
+const btn  = document.getElementById("btn");
+const out  = document.getElementById("out");
+const badge= document.getElementById("badge");
 
-      // 4) Nur HTTP?
-      if (proto==="http") {
-        return {lamp:"yellow", title:"Nur HTTP", msg:"Die Verbindung ist nicht verschlüsselt (HTTP). Vorsicht bei Eingaben."};
-      }
+function render(res){
+  out.style.display = "block";
+  out.className = "result " + (res.lamp==="bad"?"bad":res.lamp==="warn"?"warn":"ok");
+  out.innerHTML = "<strong>"+res.msg+"</strong><br><small>"+res.detail+"</small>";
+  setBadge(res.lamp, res.msg);
+}
 
-      // 5) Standard
-      return {lamp:"green", title:"Unauffällig", msg:`Keine Auffälligkeiten für ${base} gefunden.`};
-    }
+btn.onclick = ()=>{
+  const res = score(inp.value);
+  render(res);
+};
 
-    // --------- UI ---------
-    const inp  = document.getElementById("inp");
-    const btn  = document.getElementById("btn");
-    const out  = document.getElementById("out");
-    const rDot = document.getElementById("t-red");
-    const yDot = document.getElementById("t-yellow");
-    const gDot = document.getElementById("t-green");
+badge.onclick = ()=>{
+  // springe zum Eingabefeld
+  inp.scrollIntoView({behavior:"smooth", block:"center"});
+  inp.focus();
+};
 
-    function setLamp(color){
-      rDot.classList.remove("red"); yDot.classList.remove("yellow"); gDot.classList.remove("green");
-      if (color==="red") rDot.classList.add("red");
-      if (color==="yellow") yDot.classList.add("yellow");
-      if (color==="green") gDot.classList.add("green");
-    }
-
-    function render(res, raw){
-      setLamp(res.lamp);
-      const cls = res.lamp==="red" ? "bad" : res.lamp==="yellow" ? "warn" : "ok";
-      out.className = `result ${cls}`;
-      const show = normalizeUrl(raw);
-      const pretty = show ? registrableHostname(show.hostname) : raw;
-      out.innerHTML = `<div>${res.title}</div><div class="small">${res.msg}</div><div class="hint mono">${pretty}</div>`;
-    }
-
-    function run(){
-      const val = inp.value.trim();
-      if(!val){
-        setLamp("yellow");
-        out.className = "result warn";
-        out.innerHTML = `<div>Keine Eingabe</div><div class="small">Bitte gib eine URL ein.</div>`;
-        return;
-      }
-      const res = score(val);
-      render(res, val);
-    }
-
-    btn.addEventListener("click", run);
-    inp.addEventListener("keydown", e => { if(e.key==="Enter") run(); });
-
-    // Demo-Vorbefüllung beim ersten Laden (optional)
-    if (!location.search) inp.value = "sparkassse.de";
-  </script>
+/* ---------- Autostart über ?u= ---------- */
+(function autostart(){
+  const u = new URLSearchParams(location.search).get("u");
+  if(u){
+    inp.value = u;
+    const res = score(u);
+    render(res); // zeigt sofort Ampel + Ergebnis
+  }else{
+    // Startzustand der Ampel
+    setBadge("ok","Bereit");
+  }
+})();
+</script>
 </body>
 </html>
