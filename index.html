@@ -4,129 +4,105 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SiteCheck – Ampel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
     body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      display: flex;
-      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      font-size: 12pt; /* Schriftgröße auf 12pt gesetzt */
+    }
+    .bg-safe { background-color: #28a745; }
+    .bg-caution { background-color: #ffc107; }
+    .bg-danger { background-color: #dc3545; }
+    .stop-sign {
+      display: inline-flex;
       align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
-    .container {
-      background: #fff;
-      padding: 20px 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      max-width: 500px;
-      width: 100%;
-      text-align: center;
-    }
-    h1 {
-      margin-bottom: 10px;
-    }
-    .traffic {
-      display: flex;
       justify-content: center;
-      margin: 15px 0;
-    }
-    .light {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: #ccc;
-      margin: 0 5px;
-    }
-    .red { background: red; }
-    .yellow { background: orange; }
-    .green { background: green; }
-    input {
-      padding: 10px;
-      width: 70%;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-    }
-    button {
-      padding: 10px 15px;
-      margin-left: 5px;
-      border: none;
-      border-radius: 8px;
-      background: #007bff;
-      color: #fff;
-      cursor: pointer;
-    }
-    .result {
-      margin-top: 15px;
-      padding: 10px;
-      border-radius: 8px;
+      background-color: #dc3545;
+      color: white;
       font-weight: bold;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      margin: 0 auto;
+      font-size: 28px;
     }
-    .ok { background: #d4edda; color: #155724; }
-    .warn { background: #fff3cd; color: #856404; }
-    .bad { background: #f8d7da; color: #721c24; }
   </style>
 </head>
-<body>
-  <div class="container">
-    <h1>SiteCheck – Ampel</h1>
-    <div class="traffic">
-      <div id="red" class="light"></div>
-      <div id="yellow" class="light"></div>
-      <div id="green" class="light"></div>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+  <div id="app-container" class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-2xl text-center">
+    
+    <!-- Ampel -->
+    <div id="status-light" class="w-8 h-8 mx-auto rounded-full mb-6 shadow-md border-2 border-gray-200 bg-gray-300"></div>
+    
+    <h1 class="text-2xl font-bold text-gray-800 mb-2">SiteCheck – Ampel</h1>
+    <p class="text-gray-600 mb-6 text-sm">Gib eine URL ein (z. B. https://sparkasse.de) und klicke auf „Prüfen“.</p>
+    
+    <div class="flex flex-col sm:flex-row gap-4 mb-4">
+      <input type="text" id="url-input" placeholder="https://beispiel.de" 
+             class="flex-grow p-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <button id="check-button" 
+              class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Prüfen</button>
     </div>
-    <input type="text" id="urlInput" placeholder="https://beispiel.de">
-    <button onclick="checkSite()">Prüfen</button>
-    <div id="result" class="result"></div>
+
+    <!-- Feedback -->
+    <div id="feedback-message" class="text-sm font-medium p-3 rounded-xl opacity-0 transition-all"></div>
   </div>
 
   <script>
-    const BLACKLIST = [
-      "sparkassse.de", // Fake mit 3x s
-      "secure-paypal-login.com",
-      "bank-login-verification.xyz",
-      "amaz0n-support.net",
-      "paypal-kundencenter.xyz",
-      "amaz0n-konto.net",
-      "dhl-paket-verfolgung.top"
-    ];
+    const urlInput = document.getElementById('url-input');
+    const checkButton = document.getElementById('check-button');
+    const statusLight = document.getElementById('status-light');
+    const feedbackMessage = document.getElementById('feedback-message');
 
-    function normalizeUrl(url) {
-      try {
-        return new URL(url.startsWith("http") ? url : "https://" + url).hostname.toLowerCase();
-      } catch {
-        return null;
+    const blacklist = ["sparkassse.de", "secure-paypal-login.com", "bank-login-verification.xyz"];
+
+    function checkUrl(url) {
+      const lowerUrl = url.toLowerCase();
+      if (blacklist.some(domain => lowerUrl.includes(domain))) {
+        return 'danger';
       }
+      if (lowerUrl.startsWith("http://") && !lowerUrl.startsWith("https://")) {
+        return 'caution';
+      }
+      return 'safe';
     }
 
-    function setTraffic(color) {
-      document.getElementById("red").style.background = (color === "red" ? "red" : "#ccc");
-      document.getElementById("yellow").style.background = (color === "yellow" ? "orange" : "#ccc");
-      document.getElementById("green").style.background = (color === "green" ? "green" : "#ccc");
-    }
+    function updateUI(status, url) {
+      statusLight.classList.remove('bg-safe', 'bg-caution', 'bg-danger');
+      feedbackMessage.classList.remove('bg-green-100','text-green-800','bg-yellow-100','text-yellow-800','bg-red-100','text-red-800');
+      feedbackMessage.classList.add('opacity-100');
 
-    function checkSite() {
-      const input = document.getElementById("urlInput").value.trim();
-      const hostname = normalizeUrl(input);
-      const resultDiv = document.getElementById("result");
-
-      if (!hostname) {
-        resultDiv.textContent = "Ungültige URL!";
-        resultDiv.className = "result warn";
-        setTraffic("yellow");
-        return;
-      }
-
-      if (BLACKLIST.includes(hostname)) {
-        resultDiv.textContent = hostname + " ist Gefährlich (Blacklist)!";
-        resultDiv.className = "result bad";
-        setTraffic("red");
+      if (status === 'safe') {
+        statusLight.classList.add('bg-safe');
+        feedbackMessage.textContent = `${url} ist unauffällig.`;
+        feedbackMessage.classList.add('bg-green-100','text-green-800');
+      } else if (status === 'caution') {
+        statusLight.classList.add('bg-caution');
+        feedbackMessage.textContent = `${url} nutzt keine sichere Verbindung (HTTP). Vorsicht!`;
+        feedbackMessage.classList.add('bg-yellow-100','text-yellow-800');
       } else {
-        resultDiv.textContent = hostname + " ist unauffällig.";
-        resultDiv.className = "result ok";
-        setTraffic("green");
+        statusLight.classList.add('bg-danger');
+        feedbackMessage.innerHTML = `<div class="stop-sign">✋</div><p>${url} ist Gefährlich (Blacklist)!</p>`;
+        feedbackMessage.classList.add('bg-red-100','text-red-800');
       }
     }
+
+    checkButton.addEventListener('click', () => {
+      const url = urlInput.value.trim();
+      if (url) {
+        const status = checkUrl(url);
+        updateUI(status, url);
+      } else {
+        feedbackMessage.textContent = 'Bitte gib eine gültige URL ein.';
+        feedbackMessage.classList.add('bg-gray-200','text-gray-800','opacity-100');
+      }
+    });
+
+    urlInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') checkButton.click();
+    });
   </script>
 </body>
 </html>
