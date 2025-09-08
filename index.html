@@ -44,13 +44,15 @@
   .ok   { background:#dcfce7; color:#14532d; }
   .warn { background:#fef9c3; color:#7a5600; }
   .bad  { background:#fee2e2; color:#7f1d1d; }
+  .hint{margin:6px 0 0; font-size:13px; color:#6b7280; text-align:center}
 
-  /* Die fest angepinnte Ampel (oben links) */
+  /* Feste Mini-Ampel oben links (Badge) */
   .badge{
     position:fixed; top:12px; left:12px; z-index:9999;
     display:flex; gap:8px; align-items:center; padding:8px 10px;
-    background:rgba(255,255,255,.9); backdrop-filter: blur(6px);
+    background:rgba(255,255,255,.92); backdrop-filter: blur(6px);
     border:1px solid var(--soft); border-radius:999px; box-shadow:0 6px 18px rgba(0,0,0,.08);
+    transition: transform .2s ease;
   }
   .dot{
     width:14px; height:14px; border-radius:50%; background:#d1d5db; /* grau = inaktiv */
@@ -62,20 +64,32 @@
   .badge label{
     font-size:13px; color:#475569; user-select:none; display:none;
   }
-  /* auf großen Bildschirmen Label zeigen */
   @media (min-width:600px){ .badge label{display:inline} }
 
-  .hint{margin:4px 0 0; font-size:13px; color:#6b7280; text-align:center}
+  /* 🔥 Extra 1: Shake bei Rot */
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20%,60% { transform: translateX(-6px); }
+    40%,80% { transform: translateX(6px); }
+  }
+  .badge.danger { animation: shake .45s ease-in-out; }
+
+  /* 🎉 Extra 3: sanftes Grün-Glühen */
+  @keyframes glow {
+    0% { box-shadow: 0 0 0px rgba(22,163,74,0.9); }
+    100% { box-shadow: 0 0 18px rgba(22,163,74,0); }
+  }
+  .dot.green.active { animation: glow 1.2s ease-out; }
 </style>
 </head>
 <body>
 
-<!-- feste Mini-Ampel oben links -->
+<!-- Badge-Ampel -->
 <div class="badge" id="badge" title="Status der letzten Prüfung. Tippen, um zum Eingabefeld zu springen.">
   <div class="dot red"   id="b-red"></div>
   <div class="dot yellow" id="b-yellow"></div>
   <div class="dot green"  id="b-green"></div>
-  <label id="badgeLabel">–</label>
+  <label id="badgeLabel">Bereit</label>
 </div>
 
 <div class="wrap">
@@ -87,14 +101,19 @@
     <button id="btn">Prüfen</button>
   </div>
 
-  <div id="out" class="result ok" style="display:none"></div>
+  <div id="out" class="result" style="display:none"></div>
+  <!-- 🚫 Extra 2: roter STOPP-Hinweis -->
+  <p id="alert" style="display:none; margin-top:8px; font-size:18px; font-weight:bold; color:#dc2626; text-align:center;">
+    ⚠️ STOPP! Diese Seite ist gefährlich.
+  </p>
+
   <p class="hint">Tipp: Du kannst diese Seite auch mit <code>?u=https://…</code> aufrufen. Die Ampel prüft sofort.</p>
 </div>
 
 <script>
 /* ---------- Daten ---------- */
 const SAFE = [
-  "sparkasse.de"  // echte Domain
+  "sparkasse.de"
 ];
 const BLACKLIST = [
   "sparkassse.de", "sparkasssse.de", "sparkassse.com",
@@ -105,11 +124,19 @@ const BLACKLIST = [
 
 /* ---------- Helpers ---------- */
 function setBadge(status, labelText){
+  const badge = document.getElementById("badge");
+  badge.classList.remove("danger");
+
   const map = { bad:"b-red", warn:"b-yellow", ok:"b-green" };
   ["b-red","b-yellow","b-green"].forEach(id=>document.getElementById(id).classList.remove("active"));
   document.getElementById(map[status]).classList.add("active");
+
   const label = document.getElementById("badgeLabel");
   label.textContent = labelText || (status==="ok" ? "Unauffällig" : status==="warn" ? "Vorsicht" : "Gefährlich");
+
+  if(status==="bad"){
+    badge.classList.add("danger"); // 🔥 shake bei Rot
+  }
 }
 
 function normalizeUrl(raw){
@@ -118,14 +145,10 @@ function normalizeUrl(raw){
   if(!/^https?:\/\//i.test(s)) s = "https://" + s;
   try{ return new URL(s); }catch{ return null; }
 }
-
 function endsWithHost(host, candidate){
-  // exakt oder Subdomain von candidate
   return host === candidate || host.endsWith("."+candidate);
 }
-
 function levenshtein(a,b){
-  // kleine Distanz für Lookalikes (ohne externe Lib)
   if(a===b) return 0;
   const m=a.length, n=b.length;
   const dp = Array.from({length:m+1}, ()=>Array(n+1).fill(0));
@@ -143,44 +166,51 @@ function levenshtein(a,b){
 /* ---------- Bewertung ---------- */
 function score(u){
   const url = normalizeUrl(u);
-  if(!url) return { lamp:"warn", msg:"Ungültige URL", detail:String(u) };
+  if(!url) return { lamp:"warn", title:"Ungültige URL", msg:"Bitte gib eine gültige URL ein.", detail:String(u) };
 
   const host = url.hostname.toLowerCase();
 
-  // 1) Blacklist hart
+  // 1) Blacklist
   if(BLACKLIST.some(b=>endsWithHost(host, b)))
-    return { lamp:"bad", msg:"Gefährlich (Blacklist)", detail:host };
+    return { lamp:"bad", title:"Gefährlich (Blacklist)", msg:"Domain steht auf der Sperrliste.", detail:host };
 
-  // 2) Safelist priorisieren
-  if(SAFE.some(s=>endsWithHost(host, s)))
-    return { lamp:"ok", msg:"Unauffällig (bekannte Domain)", detail:host };
+  // 2) Safelist
+  if(SAFE.some(s=>endsWithHost(host, s))){
+    if(url.protocol==="http:")
+      return { lamp:"warn", title:"Nur HTTP", msg:"Verbindung ist nicht verschlüsselt (HTTP).", detail:url.href };
+    return { lamp:"ok", title:"Unauffällig (bekannte Domain)", msg:"Kein Treffer in Blacklist.", detail:host };
+  }
 
-  // 3) Lookalike-Check zu wichtigen Marken
+  // 3) Lookalike-Check (gegen wichtige Marken)
   const important = ["sparkasse.de","paypal.com","amazon.de","dhl.de","icloud.com"];
   for(const base of important){
     const d = levenshtein(host, base);
-    if(d>0 && d<=2) return { lamp:"bad", msg:"Gefährlich (Lookalike: "+base+")", detail:host };
+    if(d>0 && d<=2) return { lamp:"bad", title:"Gefährlich (Lookalike)", msg:`Sieht aus wie „${base}“.`, detail:host };
   }
 
   // 4) HTTP ohne TLS
   if(url.protocol==="http:")
-    return { lamp:"warn", msg:"Vorsicht (ohne HTTPS)", detail:url.href };
+    return { lamp:"warn", title:"Nur HTTP", msg:"Verbindung ist nicht verschlüsselt (HTTP).", detail:url.href };
 
   // 5) Neutral
-  return { lamp:"ok", msg:"Unauffällig", detail:host };
+  return { lamp:"ok", title:"Unauffällig", msg:"Keine Auffälligkeiten gefunden.", detail:host };
 }
 
 /* ---------- UI ---------- */
-const inp  = document.getElementById("single");
-const btn  = document.getElementById("btn");
-const out  = document.getElementById("out");
-const badge= document.getElementById("badge");
+const inp   = document.getElementById("single");
+const btn   = document.getElementById("btn");
+const out   = document.getElementById("out");
+const alertBox = document.getElementById("alert");
 
 function render(res){
   out.style.display = "block";
-  out.className = "result " + (res.lamp==="bad"?"bad":res.lamp==="warn"?"warn":"ok");
-  out.innerHTML = "<strong>"+res.msg+"</strong><br><small>"+res.detail+"</small>";
-  setBadge(res.lamp, res.msg);
+  const cls = res.lamp==="bad" ? "bad" : res.lamp==="warn" ? "warn" : "ok";
+  out.className = "result " + cls;
+  out.innerHTML = `<strong>${res.title}</strong><br>${res.msg}<br><small>${res.detail}</small>`;
+  setBadge(res.lamp, res.title);
+
+  // 🚫 Extra 2: STOPP-Hinweis
+  alertBox.style.display = (res.lamp==="bad") ? "block" : "none";
 }
 
 btn.onclick = ()=>{
@@ -188,8 +218,7 @@ btn.onclick = ()=>{
   render(res);
 };
 
-badge.onclick = ()=>{
-  // springe zum Eingabefeld
+document.getElementById("badge").onclick = ()=>{
   inp.scrollIntoView({behavior:"smooth", block:"center"});
   inp.focus();
 };
@@ -200,9 +229,8 @@ badge.onclick = ()=>{
   if(u){
     inp.value = u;
     const res = score(u);
-    render(res); // zeigt sofort Ampel + Ergebnis
+    render(res); // sofort Ampel + Ergebnis
   }else{
-    // Startzustand der Ampel
     setBadge("ok","Bereit");
   }
 })();
